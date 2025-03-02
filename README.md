@@ -46,25 +46,6 @@ In Subwaste Surfer, you play as Wall-E, the waste-collecting robot, navigating t
 - Responsive design that adapts to different screen sizes
 
 ## Project Structure
-<<<<<<< Updated upstream
-
-```
-subwaste-surfer/
-├── index.html                      # Main HTML file
-├── solution/                       # Game code
-│   ├── js/                         # JavaScript files
-│   │   ├── game.js                 # Main game logic
-│   │   └── environmental-facts.js  # Environmental facts data
-│   └── css/                        # CSS files
-│       └── style.css               # Game styling
-└── assets/                         # Game assets
-    ├── images/                     # Image files
-    ├── sounds/                     # Sound files
-    └── models/                     # 3D models (future feature)
-```
-
-## Development Approach
-=======
 - **Solution/**: Contains the main game files
   - `subwaste_surfer.html`: Main game HTML file
   - `main.css`: CSS styling for the game interface
@@ -85,7 +66,6 @@ subwaste-surfer/
 
 ## Screenshots
 
->>>>>>> Stashed changes
 
 This project was developed using a feature-branch Git workflow:
 
@@ -108,13 +88,7 @@ This project was developed using a feature-branch Git workflow:
 
 Created for the Code for Change 2025 Hackathon in the Environment track.
 
-<<<<<<< Updated upstream
-## License
-
-MIT License 
-=======
 
 ## Acknowledgments
 - SHPE UF for organizing the Code for Change 2025 Hackathon
 - The Three.js community for their excellent documentation and examples
->>>>>>> Stashed changes

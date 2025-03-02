@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cache Clearing</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <script>
+        // More aggressive cache clearing function
+        function clearCacheAndRedirect() {
+            // Try to clear application cache
+            if (window.applicationCache) {
+                try {
+                    window.applicationCache.swapCache();
+                } catch(e) {
+                    console.log("Application cache swap failed, but that's okay");
+                }
+            }
+            
+            // Generate a truly unique timestamp with random component
+            const timestamp = new Date().getTime() + '-' + Math.random().toString(36).substring(2, 15);
+            
+            // Force reload main page with strong cache-busting parameters
+            const gameUrl = 'Solution/subwaste_surfer.html?nocache=' + timestamp + '&force=true&random=' + Math.random();
+            
+            // Log the redirect for debugging
+            console.log("Redirecting to: " + gameUrl);
+            
+            // Clear session storage to prevent state persistence issues
+            sessionStorage.clear();
+            
+            // Set cache control headers via fetch before redirecting
+            fetch(gameUrl, {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            }).then(() => {
+                window.location.href = gameUrl;
+            }).catch(() => {
+                // If fetch fails, redirect anyway
+                window.location.href = gameUrl;
+            });
+        }
+    </script>
+</head>
+<body style="background-color: black; color: white; font-family: Arial; text-align: center; margin-top: 100px;">
+    <h1>Clearing Cached Assets</h1>
+    <p>Preparing to load Wall-E Racer with fresh assets...</p>
+    <p style="color: #ff9900;">If the game still shows cached content, please try:</p>
+    <ul style="list-style-type: none; padding: 0;">
+        <li>1. Press Ctrl+F5 to force refresh</li>
+        <li>2. Clear your browser cache manually</li>
+        <li>3. Try a different browser</li>
+    </ul>
+    <button onclick="clearCacheAndRedirect()" style="padding: 10px 20px; font-size: 16px; margin-top: 20px; background-color: #ff9900; color: black; border: none; border-radius: 5px; cursor: pointer;">
+        Click to Start Game with Fresh Assets
+    </button>
+    <script>
+        // Auto-redirect after a short delay
+        setTimeout(clearCacheAndRedirect, 1500);
+    </script>
+</body>
+</html> 
