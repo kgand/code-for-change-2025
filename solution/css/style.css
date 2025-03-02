@@ -81,6 +81,7 @@ button {
     box-shadow: 0 0 10px rgba(76, 201, 240, 0.5);
     letter-spacing: 1px;
     text-transform: uppercase;
+    margin: 10px;
 }
 
 button:hover {
@@ -91,6 +92,39 @@ button:hover {
 
 button:active {
     transform: scale(0.98);
+}
+
+.secondary-button {
+    background-color: transparent;
+    border: 2px solid #4cc9f0;
+    color: #4cc9f0;
+}
+
+.secondary-button:hover {
+    background-color: rgba(76, 201, 240, 0.2);
+    color: #ffffff;
+}
+
+.icon-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    padding: 5px;
+    font-size: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+    background-color: rgba(76, 201, 240, 0.2);
+    border: 1px solid rgba(76, 201, 240, 0.5);
+}
+
+.icon-button:hover {
+    background-color: rgba(247, 37, 133, 0.2);
+    border-color: rgba(247, 37, 133, 0.5);
 }
 
 #score-container {
@@ -149,6 +183,12 @@ button:active {
 /* Game over screen animation */
 #game-over {
     animation: fadeIn 0.5s ease-in;
+}
+
+/* Game paused screen animation */
+#game-paused {
+    animation: fadeIn 0.3s ease-in;
+    background: radial-gradient(circle, rgba(22, 33, 62, 0.95) 0%, rgba(15, 52, 96, 0.98) 100%);
 }
 
 @keyframes fadeIn {
