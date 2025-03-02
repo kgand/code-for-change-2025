@@ -749,4 +749,86 @@ button:active {
     #sorting-game-canvas {
         height: 250px;
     }
+}
+
+/* Leaderboard Styles */
+.leaderboard-container {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 20px 0;
+    max-width: 500px;
+    width: 100%;
+}
+
+.leaderboard {
+    margin-bottom: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.leaderboard table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #fff;
+    text-align: center;
+}
+
+.leaderboard th, .leaderboard td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.leaderboard th {
+    background-color: rgba(0, 129, 167, 0.5);
+    font-weight: bold;
+}
+
+.leaderboard tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.leaderboard tr.current-player {
+    background-color: rgba(247, 37, 133, 0.3);
+}
+
+#score-form {
+    display: flex;
+    margin: 10px 0;
+}
+
+#player-name {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 5px 0 0 5px;
+    font-family: 'Arial', sans-serif;
+}
+
+#submit-score-button {
+    padding: 8px 15px;
+    background-color: #0081a7;
+    color: white;
+    border: none;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#submit-score-button:hover {
+    background-color: #00afb9;
+}
+
+#score-submit-message {
+    margin-top: 10px;
+    font-size: 0.9em;
+    min-height: 20px;
+}
+
+.message-success {
+    color: #4cc9f0;
+}
+
+.message-error {
+    color: #f72585;
 } 
