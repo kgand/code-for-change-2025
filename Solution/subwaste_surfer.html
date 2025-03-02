@@ -264,6 +264,67 @@
         max-width: 80%;
         max-height: 80%;
       }
+      
+      /* Recyclable detection styles */
+      #recyclable-detection {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+        border: 2px solid #4CAF50;
+      }
+      
+      .detection-message {
+        color: #4CAF50;
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      
+      #camera-container {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      
+      #recycling-webcam {
+        width: 100%;
+        border-radius: 8px;
+        border: 2px solid #333;
+      }
+      
+      #recycling-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      
+      #detection-status {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      
+      .waiting {
+        background-color: #FFF9C4;
+        color: #F57F17;
+      }
+      
+      .success {
+        background-color: #E8F5E9;
+        color: #2E7D32;
+      }
+      
+      /* Disabled button style */
+      button:disabled {
+        background-color: #cccccc;
+        color: #666666;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
@@ -293,7 +354,18 @@
         <div id="environmental-fact"></div>
         <p>Your efforts to clean up Earth have made a difference. Try again to collect more waste and help restore our planet!</p>
         <p>Your Score: <span id="final-score">0</span></p>
-        <button id="restart-button">Restart Mission</button>
+        
+        <!-- Recyclable detection section -->
+        <div id="recyclable-detection">
+          <p class="detection-message">Show a recyclable item to the camera to restart the game</p>
+          <div id="camera-container">
+            <video id="recycling-webcam" autoplay playsinline></video>
+            <canvas id="recycling-overlay"></canvas>
+          </div>
+          <div id="detection-status" class="waiting">Waiting for recyclable item...</div>
+        </div>
+        
+        <button id="restart-button" disabled>Restart Mission</button>
       </div>
     </div>
     
@@ -1397,6 +1469,9 @@
         // Switch to overhead camera view
         if (wall_e_front_camera) switchToOverheadView();
 
+        // Initialize recyclable detection when game is over
+        initRecyclableDetection();
+
         // Set the button positions depending on camera type
         if (!wall_e_front_camera) {
           menu.setButtonsX(camera.position.x);
@@ -2052,6 +2127,9 @@
           dash.status_text.style.color = "gray";
           dash.status_text.style.textShadow = "none";
         }, 3000);
+        
+        // Reset recyclable detection status
+        resetRecyclableDetection();
       }
       
       /**
@@ -2161,6 +2239,305 @@
         init();
         animate();
       });
+
+      // WebSocket connection for recyclable detection
+      let recyclingSocket;
+      let recyclingLastDetectionTime = 0;
+      const recyclingDetectionCooldown = 1000; // 1 second cooldown
+      
+      /**
+       * Initialize recyclable detection system
+       */
+      function initRecyclableDetection() {
+        console.log("Initializing recyclable detection system");
+        
+        // Connect to WebSocket if not already connected
+        connectRecyclingWebSocket();
+        
+        // Setup webcam if not already setup
+        setupRecyclingWebcam();
+      }
+      
+      /**
+       * Set up the recycling webcam
+       */
+      async function setupRecyclingWebcam() {
+        const video = document.getElementById('recycling-webcam');
+        if (!video) return;
+        
+        // Don't re-initialize if already set up
+        if (video.srcObject) return;
+        
+        const constraints = {
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: 'user'
+          }
+        };
+        
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          video.srcObject = stream;
+          
+          // Start sending frames for detection when game over is shown
+          startRecyclingDetection();
+          
+          return true;
+        } catch (err) {
+          console.error('Error accessing webcam for recyclable detection:', err);
+          document.getElementById('detection-status').innerText = 'Error: Cannot access webcam';
+          return false;
+        }
+      }
+      
+      /**
+       * Connect to recycling detection WebSocket
+       */
+      function connectRecyclingWebSocket() {
+        // Don't reconnect if already connected
+        if (recyclingSocket && recyclingSocket.readyState === WebSocket.OPEN) return;
+        
+        // Determine correct WebSocket URL
+        // Use a consistent port 8080 for the recycling detection server
+        const serverPort = 8080;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//localhost:${serverPort}/ws/detect`;
+        
+        console.log(`Attempting to connect to recycling detection server at: ${wsUrl}`);
+        
+        try {
+          recyclingSocket = new WebSocket(wsUrl);
+          
+          recyclingSocket.onopen = function(e) {
+            console.log('Recycling WebSocket connection established');
+            // Update UI to show connected status
+            const statusElement = document.getElementById('detection-status');
+            if (statusElement) {
+              statusElement.innerText = 'Connected to detection server. Show a recyclable item...';
+              statusElement.className = 'waiting';
+            }
+            // Reset detection status
+            resetRecyclableDetection();
+          };
+          
+          recyclingSocket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.error) {
+              console.error('Server error:', data.error);
+              return;
+            }
+            
+            // Handle detection results
+            handleRecyclableDetection(data);
+          };
+          
+          recyclingSocket.onclose = function(event) {
+            console.log('Recycling WebSocket connection closed');
+            // Update UI to show disconnected status
+            const statusElement = document.getElementById('detection-status');
+            if (statusElement) {
+              statusElement.innerText = 'Connection to detection server lost. Retrying...';
+              statusElement.style.backgroundColor = '#ffcccc';
+              statusElement.style.color = '#cc0000';
+            }
+            // Try to reconnect after a delay
+            setTimeout(connectRecyclingWebSocket, 2000);
+          };
+          
+          recyclingSocket.onerror = function(error) {
+            console.error('Recycling WebSocket error:', error);
+            // Update UI to show error status
+            const statusElement = document.getElementById('detection-status');
+            if (statusElement) {
+              statusElement.innerText = 'Error connecting to detection server. Is it running?';
+              statusElement.style.backgroundColor = '#ffcccc';
+              statusElement.style.color = '#cc0000';
+            }
+          };
+        } catch (e) {
+          console.error('Error creating WebSocket connection:', e);
+          // Update UI to show error status
+          const statusElement = document.getElementById('detection-status');
+          if (statusElement) {
+            statusElement.innerText = 'Failed to connect to detection server. Is it running?';
+            statusElement.style.backgroundColor = '#ffcccc';
+            statusElement.style.color = '#cc0000';
+          }
+        }
+      }
+      
+      /**
+       * Handle recyclable detection results
+       */
+      function handleRecyclableDetection(data) {
+        const statusElement = document.getElementById('detection-status');
+        const restartButton = document.getElementById('restart-button');
+        
+        // Debug output for detection
+        console.log('Detection data received:', JSON.stringify(data));
+        
+        if (data.detections && data.detections.length > 0) {
+          // Update UI to show detection
+          const detection = data.detections[0];
+          
+          // Enhanced debugging for cardboard detection
+          console.log(`Detection details: Class=${detection.class_name}, Confidence=${detection.confidence}, BBox=${JSON.stringify(detection.bbox)}`);
+          
+          statusElement.innerText = 
+            `Recyclable detected: ${detection.class_name} (${Math.round(detection.confidence * 100)}% confidence)`;
+          statusElement.className = 'success';
+          
+          // Enable restart button
+          restartButton.disabled = false;
+          
+          // Draw bounding box
+          drawRecyclingBoundingBox(detection);
+        } else {
+          // No detection
+          statusElement.innerText = 'Waiting for recyclable item...';
+          statusElement.className = 'waiting';
+          
+          // Disable restart button
+          restartButton.disabled = true;
+          
+          // Clear canvas
+          const canvas = document.getElementById('recycling-overlay');
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
+      }
+      
+      /**
+       * Draw bounding box around detected recyclable
+       */
+      function drawRecyclingBoundingBox(detection) {
+        const video = document.getElementById('recycling-webcam');
+        const canvas = document.getElementById('recycling-overlay');
+        
+        if (!canvas || !video) return;
+        
+        // Match canvas size to video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw bounding box
+        ctx.strokeStyle = '#4CAF50';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(
+          detection.bbox[0], 
+          detection.bbox[1], 
+          detection.bbox[2], 
+          detection.bbox[3]
+        );
+        
+        // Draw label
+        ctx.fillStyle = '#4CAF50';
+        ctx.font = '16px Arial';
+        ctx.fillText(
+          `${detection.class_name} (${Math.round(detection.confidence * 100)}%)`,
+          detection.bbox[0], 
+          detection.bbox[1] > 20 ? detection.bbox[1] - 5 : detection.bbox[1] + 20
+        );
+      }
+      
+      /**
+       * Start sending frames for recyclable detection
+       */
+      function startRecyclingDetection() {
+        // Stop existing interval if any
+        if (window.recyclingDetectionInterval) {
+          clearInterval(window.recyclingDetectionInterval);
+        }
+        
+        // Start new detection interval
+        window.recyclingDetectionInterval = setInterval(sendRecyclingFrameForDetection, 500);
+      }
+      
+      /**
+       * Send current webcam frame for detection
+       */
+      function sendRecyclingFrameForDetection() {
+        if (!recyclingSocket || recyclingSocket.readyState !== WebSocket.OPEN) {
+          console.log('WebSocket not connected, skipping detection');
+          return;
+        }
+        
+        // Only process if game over screen is visible
+        if (document.getElementById('game-over-screen').style.display !== 'flex') {
+          return;
+        }
+        
+        const now = Date.now();
+        if (now - recyclingLastDetectionTime < recyclingDetectionCooldown) {
+          return; // Skip if within cooldown period
+        }
+        
+        recyclingLastDetectionTime = now;
+        
+        const video = document.getElementById('recycling-webcam');
+        if (!video || !video.srcObject) {
+          console.log('Video element or stream not available');
+          return;
+        }
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Get base64 image data
+        const imageData = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // Send to WebSocket
+        recyclingSocket.send(imageData);
+        console.log('Frame sent for detection', new Date().toISOString());
+      }
+      
+      /**
+       * Reset recyclable detection status
+       */
+      function resetRecyclableDetection() {
+        if (recyclingSocket && recyclingSocket.readyState === WebSocket.OPEN) {
+          recyclingSocket.send("RESET_DETECTION");
+        } else {
+          // Fallback to REST API if WebSocket is not available
+          const serverPort = 8080;
+          fetch(`http://localhost:${serverPort}/api/reset-detection`, {
+            method: 'POST',
+          }).catch(err => {
+            console.error('Error resetting detection:', err);
+          });
+        }
+        
+        // Reset UI
+        const statusElement = document.getElementById('detection-status');
+        const restartButton = document.getElementById('restart-button');
+        
+        if (statusElement) {
+          statusElement.innerText = 'Waiting for recyclable item...';
+          statusElement.className = 'waiting';
+        }
+        
+        if (restartButton) {
+          restartButton.disabled = true;
+        }
+        
+        // Clear canvas
+        const canvas = document.getElementById('recycling-overlay');
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
     </script>
   </body>
 </html>
