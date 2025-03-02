@@ -48,6 +48,7 @@ let inMiniGame = false; // Flag to track if mini-game is active
 let lastObstacleTime = 0; // Last time an obstacle was generated
 let lastCollectibleTime = 0; // Last time a collectible was generated
 let particles = []; // Array to hold particle effects
+let backgroundLayers = []; // Array to hold background parallax layers
 
 // Difficulty settings
 const difficultySettings = {
@@ -146,9 +147,13 @@ function init() {
     obstacles = [];
     collectibles = [];
     scorePopups = [];
+    particles = [];
     animationTime = 0;
     lastCollectTime = 0;
     lastCollectedWasteType = null;
+    
+    // Initialize background layers
+    initBackgroundLayers();
     
     // Reset mini-game state
     wasteSortingEnabled = true;
@@ -226,6 +231,59 @@ function init() {
     
     // Display random environmental facts
     displayEnvironmentalFacts();
+}
+
+// Initialize background parallax layers
+function initBackgroundLayers() {
+    backgroundLayers = [
+        {
+            y: 0,
+            speed: 0.2,
+            color: '#0a2342',
+            elements: generateStars(30)
+        },
+        {
+            y: 0,
+            speed: 0.5,
+            color: '#126872',
+            elements: generateClouds(5)
+        },
+        {
+            y: 0,
+            speed: 1,
+            color: '#1e5f74',
+            elements: []
+        }
+    ];
+}
+
+// Generate stars for background
+function generateStars(count) {
+    const stars = [];
+    for (let i = 0; i < count; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2 + 1,
+            opacity: Math.random() * 0.5 + 0.5
+        });
+    }
+    return stars;
+}
+
+// Generate clouds for background
+function generateClouds(count) {
+    const clouds = [];
+    for (let i = 0; i < count; i++) {
+        clouds.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * (canvas.height / 2),
+            width: Math.random() * 100 + 50,
+            height: Math.random() * 40 + 20,
+            opacity: Math.random() * 0.3 + 0.1
+        });
+    }
+    return clouds;
 }
 
 // Display environmental facts
@@ -564,6 +622,9 @@ function checkCollisions() {
 
 // Draw game objects
 function drawGame() {
+    // Draw background with parallax effect
+    drawBackground();
+    
     // Draw lanes
     drawLanes();
     
@@ -585,6 +646,49 @@ function drawGame() {
     // Draw combo indicator if active
     if (comboCount > 0 && comboMultiplier > 1) {
         drawComboIndicator();
+    }
+}
+
+// Draw background with parallax effect
+function drawBackground() {
+    // Draw base background
+    ctx.fillStyle = '#0f3460';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw parallax layers
+    for (const layer of backgroundLayers) {
+        // Update layer position
+        layer.y = (layer.y + settings.gameSpeed * layer.speed * 0.1) % canvas.height;
+        
+        // Draw layer
+        ctx.fillStyle = layer.color;
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(0, layer.y - canvas.height, canvas.width, canvas.height);
+        ctx.fillRect(0, layer.y, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        
+        // Draw layer elements
+        if (layer.elements) {
+            for (const element of layer.elements) {
+                if (element.size) {
+                    // Draw star
+                    ctx.fillStyle = '#ffffff';
+                    ctx.globalAlpha = element.opacity;
+                    ctx.beginPath();
+                    ctx.arc(element.x, (element.y + layer.y) % canvas.height, element.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (element.width) {
+                    // Draw cloud
+                    ctx.fillStyle = '#ffffff';
+                    ctx.globalAlpha = element.opacity;
+                    ctx.beginPath();
+                    ctx.ellipse(element.x, (element.y + layer.y) % canvas.height, element.width / 2, element.height / 2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+        
+        ctx.globalAlpha = 1;
     }
 }
 
