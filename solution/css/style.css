@@ -512,6 +512,15 @@ button:active {
     font-size: 28px;
 }
 
+#mobile-pause {
+    background-color: rgba(247, 37, 133, 0.3);
+    border: 2px solid rgba(247, 37, 133, 0.8);
+}
+
+#mobile-pause:active {
+    background-color: rgba(247, 37, 133, 0.6);
+}
+
 /* Hide mobile controls by default and show only on mobile devices */
 .mobile-only {
     display: none;
