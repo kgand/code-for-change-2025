@@ -109,8 +109,33 @@ class WasteSortingGame {
         this.canvas = document.getElementById('sorting-game-canvas');
         this.ctx = this.canvas.getContext('2d');
         
+        // Make canvas responsive
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+        
         // Add event listeners for drag and drop
         this.addEventListeners();
+    }
+    
+    // New method to resize canvas based on screen size
+    resizeCanvas() {
+        const container = document.getElementById('waste-sorting-container');
+        if (!container) return;
+        
+        const containerWidth = container.offsetWidth;
+        const containerHeight = container.offsetHeight;
+        
+        // Set maximum dimensions
+        const maxWidth = Math.min(800, containerWidth - 40); // 20px padding on each side
+        const maxHeight = Math.min(400, containerHeight * 0.5); // 50% of container height
+        
+        this.canvas.width = maxWidth;
+        this.canvas.height = maxHeight;
+        
+        // Redraw if game is active
+        if (this.isActive) {
+            this.drawGame();
+        }
     }
     
     addEventListeners() {
@@ -265,6 +290,9 @@ class WasteSortingGame {
         // Update displays
         document.getElementById('sorting-score').textContent = `Score: ${this.score}`;
         document.getElementById('sorting-time').textContent = `Time: ${this.timeLeft}s`;
+        
+        // Ensure canvas is properly sized
+        this.resizeCanvas();
         
         // Generate initial items
         for (let i = 0; i < 5; i++) {
