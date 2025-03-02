@@ -47,8 +47,11 @@ let wasteSortingEnabled = true; // Flag to enable/disable mini-game
 let inMiniGame = false; // Flag to track if mini-game is active
 let lastObstacleTime = 0; // Last time an obstacle was generated
 let lastCollectibleTime = 0; // Last time a collectible was generated
+let lastPowerUpTime = 0; // Last time a power-up was generated
 let particles = []; // Array to hold particle effects
 let backgroundLayers = []; // Array to hold background parallax layers
+let powerUps = []; // Array to hold active power-ups
+let activePowerUps = {}; // Object to track active power-up effects
 
 // Difficulty settings
 const difficultySettings = {
@@ -110,6 +113,30 @@ let player;
 let obstacles = [];
 let collectibles = [];
 let scorePopups = [];
+
+// Power-up types and effects
+const powerUpTypes = {
+    shield: {
+        duration: 10000, // 10 seconds
+        color: '#4cc9f0',
+        description: 'Shield: Protects from obstacles',
+        icon: '🛡️'
+    },
+    magnet: {
+        duration: 8000, // 8 seconds
+        color: '#f72585',
+        description: 'Magnet: Attracts collectibles',
+        attractRadius: 150,
+        icon: '🧲'
+    },
+    speedBoost: {
+        duration: 5000, // 5 seconds
+        color: '#4361ee',
+        description: 'Speed Boost: Temporarily increases speed',
+        speedMultiplier: 1.5,
+        icon: '⚡'
+    }
+};
 
 // Set difficulty
 function setDifficulty(difficulty) {
@@ -426,11 +453,25 @@ function updateGame(deltaTime) {
         lastCollectibleTime = currentTime;
     }
     
+    // Generate power-ups occasionally
+    if (currentTime - lastPowerUpTime > 5000) { // Check every 5 seconds
+        if (Math.random() < 0.2) { // 20% chance to generate a power-up
+            generatePowerUp();
+        }
+        lastPowerUpTime = currentTime;
+    }
+    
     // Update obstacles
     updateObstacles(deltaTime);
     
     // Update collectibles
     updateCollectibles(deltaTime);
+    
+    // Update power-ups
+    updatePowerUps(deltaTime);
+    
+    // Update active power-up effects
+    updateActivePowerUps(deltaTime, currentTime);
     
     // Update particles
     updateParticles(deltaTime);
@@ -481,7 +522,14 @@ function updatePlayer(deltaTime) {
     
     // Update player x position based on lane
     const targetX = (player.lane * settings.laneWidth) - (settings.laneWidth / 2);
-    player.x += (targetX - player.x) * 0.1 * deltaTime * 0.1;
+    
+    // Apply speed boost if active
+    let moveSpeed = 0.1;
+    if (activePowerUps.speedBoost) {
+        moveSpeed *= powerUpTypes.speedBoost.speedMultiplier;
+    }
+    
+    player.x += (targetX - player.x) * moveSpeed * deltaTime * 0.1;
     
     // Update animation state
     player.animationState = Math.floor(animationTime / 200) % 4;
@@ -586,6 +634,36 @@ function checkCollisions() {
     for (let i = 0; i < obstacles.length; i++) {
         const obstacle = obstacles[i];
         
+        // Check if player has shield power-up
+        if (activePowerUps.shield) {
+            // Destroy the obstacle
+            obstacles.splice(i, 1);
+            
+            // Create particle effect
+            createCollectionParticles(obstacle.x, obstacle.y, '#4cc9f0');
+            
+            // Play shield hit sound
+            if (typeof soundManager !== 'undefined') {
+                soundManager.play('collect');
+            }
+            
+            // Add points
+            score += 50;
+            updateScore();
+            
+            // Create score popup
+            scorePopups.push({
+                x: obstacle.x,
+                y: obstacle.y,
+                value: 50,
+                opacity: 1,
+                velocityY: -2,
+                combo: null
+            });
+            
+            return;
+        }
+        
         // Simple collision detection
         if (
             player.x < obstacle.x + obstacle.width &&
@@ -608,6 +686,21 @@ function checkCollisions() {
     for (let i = collectibles.length - 1; i >= 0; i--) {
         const collectible = collectibles[i];
         
+        // Calculate distance for magnet power-up
+        if (activePowerUps.magnet) {
+            const dx = player.x - collectible.x;
+            const dy = player.y - collectible.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < powerUpTypes.magnet.attractRadius) {
+                // Move collectible toward player
+                const attractSpeed = 5;
+                const angle = Math.atan2(dy, dx);
+                collectible.x += Math.cos(angle) * attractSpeed;
+                collectible.y += Math.sin(angle) * attractSpeed;
+            }
+        }
+        
         // Simple collision detection
         if (
             player.x < collectible.x + collectible.width &&
@@ -616,6 +709,21 @@ function checkCollisions() {
             player.y + player.height > collectible.y
         ) {
             collectWaste(i);
+        }
+    }
+    
+    // Check for collisions with power-ups
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+        const powerUp = powerUps[i];
+        
+        // Simple collision detection
+        if (
+            player.x < powerUp.x + powerUp.width &&
+            player.x + player.width > powerUp.x &&
+            player.y < powerUp.y + powerUp.height &&
+            player.y + player.height > powerUp.y
+        ) {
+            collectPowerUp(i);
         }
     }
 }
@@ -637,11 +745,17 @@ function drawGame() {
     // Draw collectibles
     drawCollectibles();
     
+    // Draw power-ups
+    drawPowerUps();
+    
     // Draw particles
     drawParticles();
     
     // Draw score popups
     drawScorePopups();
+    
+    // Draw active power-up indicators
+    drawActivePowerUps();
     
     // Draw combo indicator if active
     if (comboCount > 0 && comboMultiplier > 1) {
@@ -713,6 +827,34 @@ function drawLanes() {
 function drawPlayer() {
     // Draw Wall-E body
     ctx.fillStyle = '#f9c74f'; // Yellow-orange for Wall-E
+    
+    // Add visual effect for active power-ups
+    if (activePowerUps.shield) {
+        // Draw shield effect
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.width * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = powerUpTypes.shield.color;
+        ctx.globalAlpha = 0.3;
+        ctx.fill();
+        ctx.restore();
+    }
+    
+    if (activePowerUps.speedBoost) {
+        // Draw speed lines behind player
+        ctx.save();
+        for (let i = 0; i < 5; i++) {
+            ctx.beginPath();
+            ctx.moveTo(player.x - player.width / 2 - 10 - i * 3, player.y - player.height / 2);
+            ctx.lineTo(player.x - player.width / 2 - 20 - i * 5, player.y + player.height / 2);
+            ctx.strokeStyle = powerUpTypes.speedBoost.color;
+            ctx.globalAlpha = 0.5 - i * 0.1;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+    
     ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
     
     // Draw treads/wheels
@@ -890,6 +1032,41 @@ function drawCollectibles() {
     }
 }
 
+// Draw power-ups
+function drawPowerUps() {
+    for (const powerUp of powerUps) {
+        const typeConfig = powerUpTypes[powerUp.type];
+        
+        ctx.save();
+        ctx.translate(powerUp.x, powerUp.y);
+        ctx.rotate(powerUp.rotation);
+        
+        // Draw power-up background
+        ctx.fillStyle = typeConfig.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, powerUp.width / 2 * (1 + powerUp.pulseSize), 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw power-up icon
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(typeConfig.icon, 0, 0);
+        
+        ctx.restore();
+        
+        // Draw glow effect
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = typeConfig.color;
+        ctx.beginPath();
+        ctx.arc(powerUp.x, powerUp.y, powerUp.width * 0.7 * (1 + powerUp.pulseSize), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
 // Draw particles
 function drawParticles() {
     for (const particle of particles) {
@@ -913,6 +1090,12 @@ function drawScorePopups() {
             // Draw difficulty popup
             ctx.font = 'bold 28px Arial';
             ctx.fillStyle = '#f72585';
+            ctx.textAlign = 'center';
+            ctx.fillText(popup.value, popup.x, popup.y);
+        } else if (popup.isPowerUpPopup) {
+            // Draw power-up notification
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = popup.color;
             ctx.textAlign = 'center';
             ctx.fillText(popup.value, popup.x, popup.y);
         } else {
@@ -996,7 +1179,13 @@ function gameOver() {
 // Player jump function
 function playerJump() {
     if (!player.isJumping) {
-        player.velocityY = settings.jumpForce;
+        // Apply speed boost to jump force if active
+        let jumpForce = settings.jumpForce;
+        if (activePowerUps.speedBoost) {
+            jumpForce *= 1.2; // Jump higher with speed boost
+        }
+        
+        player.velocityY = jumpForce;
         player.isJumping = true;
         
         // Play jump sound
@@ -1242,5 +1431,147 @@ function createCollectionParticles(x, y, color) {
             opacity: 1,
             life: Math.random() * 30 + 20
         });
+    }
+}
+
+// Generate a power-up
+function generatePowerUp() {
+    const lane = Math.floor(Math.random() * settings.lanes);
+    const powerUpKeys = Object.keys(powerUpTypes);
+    const type = powerUpKeys[Math.floor(Math.random() * powerUpKeys.length)];
+    
+    powerUps.push({
+        x: (lane * settings.laneWidth) - (settings.laneWidth / 2),
+        y: -30,
+        width: 40,
+        height: 40,
+        lane: lane,
+        type: type,
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.1,
+        pulseSize: 0,
+        pulseDirection: 1
+    });
+}
+
+// Update power-ups
+function updatePowerUps(deltaTime) {
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+        const powerUp = powerUps[i];
+        
+        // Move power-up down
+        powerUp.y += settings.gameSpeed * deltaTime * 0.1;
+        
+        // Rotate power-up for visual interest
+        powerUp.rotation += powerUp.rotationSpeed;
+        
+        // Pulse effect
+        powerUp.pulseSize += powerUp.pulseDirection * 0.02;
+        if (powerUp.pulseSize > 0.2 || powerUp.pulseSize < -0.2) {
+            powerUp.pulseDirection *= -1;
+        }
+        
+        // Remove power-ups that are off-screen
+        if (powerUp.y > canvas.height) {
+            powerUps.splice(i, 1);
+        }
+    }
+}
+
+// Collect power-up
+function collectPowerUp(index) {
+    const powerUp = powerUps[index];
+    const typeConfig = powerUpTypes[powerUp.type];
+    
+    // Apply power-up effect
+    activePowerUps[powerUp.type] = {
+        startTime: performance.now(),
+        duration: typeConfig.duration
+    };
+    
+    // Create particle effect
+    createCollectionParticles(powerUp.x, powerUp.y, typeConfig.color);
+    
+    // Create notification popup
+    scorePopups.push({
+        x: canvas.width / 2,
+        y: canvas.height / 3,
+        value: typeConfig.description,
+        opacity: 1,
+        velocityY: -1,
+        isPowerUpPopup: true,
+        color: typeConfig.color
+    });
+    
+    // Play power-up sound
+    if (typeof soundManager !== 'undefined') {
+        soundManager.play('powerUp');
+    }
+    
+    // Add bonus points
+    score += 100;
+    updateScore();
+    
+    // Remove the power-up
+    powerUps.splice(index, 1);
+}
+
+// Update active power-ups
+function updateActivePowerUps(deltaTime, currentTime) {
+    // Check for expired power-ups
+    for (const [type, data] of Object.entries(activePowerUps)) {
+        if (currentTime - data.startTime > data.duration) {
+            delete activePowerUps[type];
+            
+            // Notification for power-up expiry
+            scorePopups.push({
+                x: canvas.width / 2,
+                y: canvas.height / 3,
+                value: `${powerUpTypes[type].description} expired!`,
+                opacity: 1,
+                velocityY: -1,
+                isPowerUpPopup: true,
+                color: '#888888'
+            });
+        }
+    }
+    
+    // Apply power-up effects
+    if (activePowerUps.speedBoost) {
+        // Speed boost effect is applied directly in the player movement
+    }
+}
+
+// Draw active power-up indicators
+function drawActivePowerUps() {
+    let y = 100;
+    const x = canvas.width - 100;
+    
+    for (const [type, data] of Object.entries(activePowerUps)) {
+        const typeConfig = powerUpTypes[type];
+        const timeRemaining = typeConfig.duration - (performance.now() - data.startTime);
+        const percentRemaining = timeRemaining / typeConfig.duration;
+        
+        // Draw icon
+        ctx.fillStyle = typeConfig.color;
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(typeConfig.icon, x, y);
+        
+        // Draw timer bar
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x - 25, y + 25, 50, 5);
+        
+        ctx.fillStyle = typeConfig.color;
+        ctx.fillRect(x - 25, y + 25, 50 * percentRemaining, 5);
+        
+        // Move down for next power-up
+        y += 60;
     }
 } 

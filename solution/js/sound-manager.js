@@ -13,7 +13,9 @@ class SoundManager {
             collect: new Audio('assets/sounds/collect.mp3'),
             crash: new Audio('assets/sounds/crash.mp3'),
             gameOver: new Audio('assets/sounds/game-over.mp3'),
-            backgroundMusic: new Audio('assets/sounds/background-music.mp3')
+            backgroundMusic: new Audio('assets/sounds/background-music.mp3'),
+            powerUp: new Audio('assets/sounds/power-up.mp3'),
+            move: new Audio('assets/sounds/move.mp3')
         };
         
         // Configure sound properties
