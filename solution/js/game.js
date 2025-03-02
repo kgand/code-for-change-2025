@@ -47,6 +47,7 @@ let wasteSortingEnabled = true; // Flag to enable/disable mini-game
 let inMiniGame = false; // Flag to track if mini-game is active
 let lastObstacleTime = 0; // Last time an obstacle was generated
 let lastCollectibleTime = 0; // Last time a collectible was generated
+let particles = []; // Array to hold particle effects
 
 // Difficulty settings
 const difficultySettings = {
@@ -373,6 +374,9 @@ function updateGame(deltaTime) {
     // Update collectibles
     updateCollectibles(deltaTime);
     
+    // Update particles
+    updateParticles(deltaTime);
+    
     // Update score popups
     updateScorePopups(deltaTime);
     
@@ -485,6 +489,26 @@ function updateCollectibles(deltaTime) {
     }
 }
 
+// Update particles
+function updateParticles(deltaTime) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const particle = particles[i];
+        
+        // Update position
+        particle.x += particle.speedX;
+        particle.y += particle.speedY;
+        
+        // Update life and opacity
+        particle.life -= 1;
+        particle.opacity = particle.life / 50;
+        
+        // Remove dead particles
+        if (particle.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
 // Update score popups
 function updateScorePopups(deltaTime) {
     for (let i = scorePopups.length - 1; i >= 0; i--) {
@@ -551,6 +575,9 @@ function drawGame() {
     
     // Draw collectibles
     drawCollectibles();
+    
+    // Draw particles
+    drawParticles();
     
     // Draw score popups
     drawScorePopups();
@@ -759,6 +786,19 @@ function drawCollectibles() {
     }
 }
 
+// Draw particles
+function drawParticles() {
+    for (const particle of particles) {
+        ctx.save();
+        ctx.globalAlpha = particle.opacity;
+        ctx.fillStyle = particle.color;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
 // Draw score popups
 function drawScorePopups() {
     for (const popup of scorePopups) {
@@ -899,6 +939,9 @@ function collectWaste(collectibleIndex) {
     wasteCollected++;
     lastCollectTime = currentTime;
     lastCollectedWasteType = wasteType;
+    
+    // Create particle effect
+    createCollectionParticles(collectible.x, collectible.y, collectible.color);
     
     // Check if we should trigger the waste sorting mini-game
     if (wasteSortingEnabled && wasteSortingGame && !inMiniGame && 
@@ -1078,4 +1121,22 @@ function createDifficultyPopup(level) {
         velocityY: -1,
         isDifficultyPopup: true
     });
+}
+
+// Create particles for waste collection
+function createCollectionParticles(x, y, color) {
+    const particleCount = 15;
+    
+    for (let i = 0; i < particleCount; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            size: Math.random() * 5 + 2,
+            speedX: (Math.random() - 0.5) * 5,
+            speedY: (Math.random() - 0.5) * 5,
+            color: color,
+            opacity: 1,
+            life: Math.random() * 30 + 20
+        });
+    }
 } 
