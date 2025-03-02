@@ -21,6 +21,9 @@ const difficultyButtons = document.querySelectorAll('.difficulty-button');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
+// Import or reference the animation manager
+let animationManager = null;
+
 // Sound controls
 const muteButton = document.getElementById('mute-button') || document.createElement('button');
 const musicButton = document.getElementById('music-button') || document.createElement('button');
@@ -282,6 +285,9 @@ function init() {
             event.preventDefault();
         }
     });
+    
+    // Initialize the animation manager
+    animationManager = new AnimationManager(canvas, ctx, settings);
 }
 
 // Detect device capabilities for performance optimizations
@@ -518,6 +524,9 @@ function startGame() {
     if (typeof accessibilityManager !== 'undefined') {
         accessibilityManager.announceGameEvent('gameStart');
     }
+    
+    // Create a fade-in transition effect
+    animationManager.createFadeTransition('in', 500);
 }
 
 // Pause the game
@@ -553,6 +562,9 @@ function pauseGame() {
     if (typeof accessibilityManager !== 'undefined') {
         accessibilityManager.announceGameEvent('gamePause');
     }
+    
+    // Create a fade transition
+    animationManager.createWipeTransition('out', 300);
 }
 
 // Resume the game
@@ -578,54 +590,44 @@ function resumeGame() {
     if (typeof accessibilityManager !== 'undefined') {
         accessibilityManager.announceGameEvent('gameResume');
     }
+    
+    // Create a fade transition
+    animationManager.createWipeTransition('in', 300);
 }
 
-// Game loop with performance monitoring
+// Game loop with enhanced animations
 function gameLoop(timestamp) {
-    // Calculate delta time and throttle frame rate if needed
-    const deltaTime = Math.min(timestamp - lastTime, settings.frameTimeLimit);
+    if (!lastTime) {
+        lastTime = timestamp;
+    }
+    
+    // Calculate delta time between frames
+    const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
     
-    // Performance monitoring - start time measurement
-    const startTime = performance.now();
-    
-    // Update animation time
+    // Update animation time for various effects
     animationTime += deltaTime;
     
-    // Update combo timer
-    if (comboCount > 0) {
-        comboTimer -= deltaTime;
-        if (comboTimer <= 0) {
-            comboCount = 0;
-            comboMultiplier = 1;
-        }
-    }
-    
-    // Clear canvas
+    // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Update game state
-    updateGame(deltaTime);
-    
-    // Draw game objects
-    drawGame();
-    
-    // Performance monitoring - end time measurement
-    const endTime = performance.now();
-    const frameTime = endTime - startTime;
-    
-    // Update performance metrics
-    updatePerformanceMetrics(frameTime, timestamp);
-    
-    // Throttle frame rate if running too fast
-    const timeToNextFrame = Math.max(0, settings.frameTimeLimit - frameTime);
-    
-    // Continue the loop if game is active
-    if (gameActive && !gamePaused) {
-        animationFrameId = setTimeout(() => {
-            requestAnimationFrame(gameLoop);
-        }, timeToNextFrame);
+    // Update and render game if active and not paused
+    if (gameActive && !gamePaused && !inMiniGame) {
+        // Update game state
+        updateGame(deltaTime);
+        
+        // Update animation manager
+        animationManager.update(timestamp);
+        
+        // Draw game
+        drawGame();
+        
+        // Draw animations on top
+        animationManager.draw();
     }
+    
+    // Continue the game loop
+    animationFrameId = requestAnimationFrame(gameLoop);
 }
 
 // Update performance metrics
@@ -749,6 +751,9 @@ function updateGame(deltaTime) {
         
         settings.lastDifficultyIncrease = animationTime;
     }
+    
+    // Update achievements
+    updateAchievements();
 }
 
 // Update player position
@@ -780,6 +785,12 @@ function updatePlayer(deltaTime) {
     
     // Animate eyes (simple up and down movement)
     player.eyeHeight = -20 + Math.sin(animationTime / 300) * 3;
+    
+    // Add trail effect if player has active speed boost or invincibility
+    if (activePowerUps.speedBoost || activePowerUps.invincibility) {
+        const trailColor = activePowerUps.speedBoost ? '#00ffff' : '#ffff00';
+        animationManager.createTrailEffect(player.x + player.width / 2, player.y + player.height, trailColor);
+    }
 }
 
 // Generate obstacle (renamed from generateObstacles)
@@ -1579,6 +1590,9 @@ function gameOver() {
     if (typeof accessibilityManager !== 'undefined') {
         accessibilityManager.announceGameEvent('gameOver', { score, wasteCollected });
     }
+    
+    // Create a dramatic fade-out transition
+    animationManager.createFadeTransition('out', 1000);
 }
 
 // Player jump function
@@ -1602,23 +1616,39 @@ function playerJump() {
 
 // Handle collectible collection
 function collectWaste(collectibleIndex) {
+    // Get the collected waste
     const collectible = collectibles[collectibleIndex];
-    const collectibleType = collectible.type;
-    const basePoints = collectible.points;
+    const wasteType = collectible.type;
+    let points = 0;
+    let color = '';
+    
+    // Calculate points based on waste type
+    switch(wasteType) {
+        case 'plastic':
+            points = 10;
+            color = '#2196f3'; // Blue for plastic
+            break;
+        case 'paper':
+            points = 15;
+            color = '#8bc34a'; // Green for paper
+            break;
+        case 'metal':
+            points = 25;
+            color = '#ff9800'; // Orange for metal
+            break;
+    }
     
     // Apply combo multiplier
-    const pointsEarned = Math.round(basePoints * comboMultiplier);
+    if (comboCount > 0) {
+        points *= comboMultiplier;
+    }
     
-    // Add to score
-    score += pointsEarned;
-    updateScore();
-    
-    // Increment waste collected
+    // Update score and waste count
+    score += points;
     wasteCollected++;
-    updateWasteCollected();
     
-    // Update last collected waste type
-    lastCollectedWasteType = collectibleType;
+    // Create collection particle effect at the collectible's position
+    animationManager.createCollectionEffect(collectible.x, collectible.y, color);
     
     // Reset combo timer
     const currentTime = performance.now();
@@ -1637,33 +1667,13 @@ function collectWaste(collectibleIndex) {
     }
     
     // Create score popup
-    scorePopups.push({
-        x: collectible.x,
-        y: collectible.y,
-        value: pointsEarned,
-        opacity: 1,
-        velocityY: -2,
-        combo: comboMultiplier > 1 ? comboMultiplier : null
-    });
+    const scorePopup = getScorePopupFromPool();
+    scorePopup.x = collectible.x;
+    scorePopup.y = collectible.y - 20;
+    scorePopup.value = `+${points}`;
+    scorePopup.opacity = 1;
     
-    // Create particle effect
-    createCollectionParticles(collectible.x, collectible.y, collectible.color);
-    
-    // Play sound effect
-    if (typeof soundManager !== 'undefined') {
-        soundManager.play('collect');
-    }
-    
-    // Announce waste collection for screen readers
-    if (typeof accessibilityManager !== 'undefined') {
-        accessibilityManager.announceGameEvent('collectWaste', { 
-            type: collectibleType,
-            points: pointsEarned,
-            combo: comboMultiplier
-        });
-    }
-    
-    // Remove collectible
+    // Remove the collected waste
     collectibles.splice(collectibleIndex, 1);
     
     // Check if we should trigger the waste sorting mini-game
@@ -2190,4 +2200,26 @@ function setQualityLevel(level) {
     } catch (error) {
         console.error('Error saving quality preference:', error);
     }
-} 
+}
+
+// Update milestone achievements
+function updateAchievements() {
+    // Check for milestone achievements (every 100 points)
+    if (score > 0 && score % 100 === 0) {
+        createAchievementCelebration();
+    }
+    
+    // Check for waste collection milestones
+    if (wasteCollected > 0 && wasteCollected % 10 === 0) {
+        createAchievementCelebration();
+    }
+}
+
+// Create a major achievement celebration effect
+function createAchievementCelebration() {
+    // Create a celebration effect at the center of the canvas
+    animationManager.createCelebrationEffect(canvas.width / 2, canvas.height / 2);
+    
+    // Create a fade transition to highlight the achievement
+    animationManager.createFadeTransition('out', 500);
+}
