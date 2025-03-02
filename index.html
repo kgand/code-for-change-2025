@@ -87,6 +87,36 @@
             <h1>Game Over</h1>
             <div id="final-score">Score: 0</div>
             <div id="final-waste">Waste Collected: 0</div>
+            
+            <div class="leaderboard-container">
+                <h3>High Scores</h3>
+                <div id="leaderboard" class="leaderboard">
+                    <div id="leaderboard-loading">Loading high scores...</div>
+                    <table id="leaderboard-table" class="hidden">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>Score</th>
+                                <th>Waste</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-entries">
+                            <!-- Leaderboard entries will be dynamically inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="submit-score-form">
+                    <h4>Submit Your Score</h4>
+                    <form id="score-form">
+                        <input type="text" id="player-name" placeholder="Your Name" maxlength="15" required>
+                        <button type="submit" id="submit-score-button">Submit Score</button>
+                    </form>
+                    <div id="score-submit-message"></div>
+                </div>
+            </div>
+            
             <div class="fact-container">
                 <h3>Environmental Fact</h3>
                 <p id="game-over-fact" class="environmental-fact"></p>
@@ -99,6 +129,7 @@
     <script src="solution/js/sound-manager.js"></script>
     <script src="solution/js/touch-controls.js"></script>
     <script src="solution/js/waste-sorting-game.js"></script>
+    <script src="solution/js/leaderboard.js"></script>
     <script src="solution/js/game.js"></script>
 </body>
 </html> 

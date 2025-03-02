@@ -982,6 +982,19 @@ function gameOver() {
     const factCategory = lastCollectedWasteType ? wasteCategories[lastCollectedWasteType] : null;
     gameOverFactElement.textContent = getRandomFact(factCategory);
     
+    // Update leaderboard with current score
+    if (typeof leaderboardManager !== 'undefined') {
+        leaderboardManager.setCurrentScore(score, wasteCollected);
+        
+        // Reset submit button and input field
+        const submitButton = document.getElementById('submit-score-button');
+        const playerNameInput = document.getElementById('player-name');
+        if (submitButton && playerNameInput) {
+            submitButton.disabled = false;
+            playerNameInput.disabled = false;
+        }
+    }
+    
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.remove('hidden');
