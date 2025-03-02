@@ -51,22 +51,28 @@ let lastCollectibleTime = 0; // Last time a collectible was generated
 // Difficulty settings
 const difficultySettings = {
     easy: {
-        gameSpeed: 5,
-        obstacleFrequency: 0.02,
-        collectibleFrequency: 0.015,
-        difficultyIncreaseRate: 0.3
+        gameSpeed: 4,
+        obstacleFrequency: 0.015,
+        collectibleFrequency: 0.02,
+        difficultyIncreaseRate: 0.2,
+        jumpForce: -9,
+        wasteSortingThreshold: 15
     },
     medium: {
-        gameSpeed: 7,
-        obstacleFrequency: 0.03,
-        collectibleFrequency: 0.012,
-        difficultyIncreaseRate: 0.5
+        gameSpeed: 6,
+        obstacleFrequency: 0.025,
+        collectibleFrequency: 0.015,
+        difficultyIncreaseRate: 0.4,
+        jumpForce: -10,
+        wasteSortingThreshold: 10
     },
     hard: {
-        gameSpeed: 9,
-        obstacleFrequency: 0.04,
+        gameSpeed: 8,
+        obstacleFrequency: 0.035,
         collectibleFrequency: 0.01,
-        difficultyIncreaseRate: 0.7
+        difficultyIncreaseRate: 0.6,
+        jumpForce: -11,
+        wasteSortingThreshold: 8
     }
 };
 
@@ -74,16 +80,17 @@ const difficultySettings = {
 const settings = {
     gameSpeed: 5, // Will be set based on difficulty
     gravity: 0.5,
-    jumpForce: -10,
+    jumpForce: -10, // Will be set based on difficulty
     laneWidth: 200,
     lanes: 3,
     obstacleFrequency: 0.02, // Will be set based on difficulty
     collectibleFrequency: 0.01, // Will be set based on difficulty
-    difficultyIncreaseInterval: 10000, // Increase difficulty every 10 seconds
+    difficultyIncreaseInterval: 15000, // Increase difficulty every 15 seconds (increased from 10 seconds)
     lastDifficultyIncrease: 0,
     difficultyIncreaseRate: 0.3, // Will be set based on difficulty
     comboTimeWindow: 2000, // Time window in ms for combo
-    maxComboMultiplier: 5
+    maxComboMultiplier: 5,
+    maxDifficultyLevel: 5 // Maximum number of difficulty increases
 };
 
 // Waste type point values
@@ -111,6 +118,8 @@ function setDifficulty(difficulty) {
     settings.obstacleFrequency = difficultySettings[difficulty].obstacleFrequency;
     settings.collectibleFrequency = difficultySettings[difficulty].collectibleFrequency;
     settings.difficultyIncreaseRate = difficultySettings[difficulty].difficultyIncreaseRate;
+    settings.jumpForce = difficultySettings[difficulty].jumpForce;
+    wasteSortingThreshold = difficultySettings[difficulty].wasteSortingThreshold;
     
     // Update UI
     difficultyButtons.forEach(button => {
@@ -376,9 +385,21 @@ function updateGame(deltaTime) {
     
     // Increase difficulty over time
     if (animationTime - settings.lastDifficultyIncrease > settings.difficultyIncreaseInterval) {
-        settings.gameSpeed += settings.difficultyIncreaseRate;
-        settings.obstacleFrequency += 0.002 * settings.difficultyIncreaseRate;
-        settings.collectibleFrequency += 0.001 * settings.difficultyIncreaseRate;
+        // Count how many times difficulty has increased
+        const difficultyLevel = Math.floor((animationTime - settings.lastDifficultyIncrease) / settings.difficultyIncreaseInterval);
+        
+        if (difficultyLevel <= settings.maxDifficultyLevel) {
+            // Apply difficulty increase with gradual diminishing returns
+            const scaleFactor = 1 - (difficultyLevel / (settings.maxDifficultyLevel * 2));
+            
+            settings.gameSpeed += settings.difficultyIncreaseRate * scaleFactor;
+            settings.obstacleFrequency += 0.002 * settings.difficultyIncreaseRate * scaleFactor;
+            settings.collectibleFrequency += 0.001 * settings.difficultyIncreaseRate * scaleFactor;
+            
+            // Show difficulty increase notification
+            createDifficultyPopup(difficultyLevel);
+        }
+        
         settings.lastDifficultyIncrease = animationTime;
     }
 }
@@ -744,17 +765,25 @@ function drawScorePopups() {
         ctx.save();
         ctx.globalAlpha = popup.opacity;
         
-        // Draw score value
-        ctx.font = '20px Arial';
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.fillText(`+${popup.value}`, popup.x, popup.y);
-        
-        // Draw combo multiplier if applicable
-        if (popup.combo) {
-            ctx.font = '16px Arial';
+        if (popup.isDifficultyPopup) {
+            // Draw difficulty popup
+            ctx.font = 'bold 28px Arial';
             ctx.fillStyle = '#f72585';
-            ctx.fillText(`x${popup.combo} COMBO!`, popup.x, popup.y + 20);
+            ctx.textAlign = 'center';
+            ctx.fillText(popup.value, popup.x, popup.y);
+        } else {
+            // Draw score value
+            ctx.font = '20px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText(`+${popup.value}`, popup.x, popup.y);
+            
+            // Draw combo multiplier if applicable
+            if (popup.combo) {
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#f72585';
+                ctx.fillText(`x${popup.combo} COMBO!`, popup.x, popup.y + 20);
+            }
         }
         
         ctx.restore();
@@ -1027,4 +1056,26 @@ function movePlayer(direction) {
             soundManager.play('move');
         }
     }
+}
+
+// Create difficulty increase popup
+function createDifficultyPopup(level) {
+    const messages = [
+        "Speed increasing!",
+        "Challenge intensifies!",
+        "Difficulty rising!",
+        "Getting harder!",
+        "Maximum challenge!"
+    ];
+    
+    const message = level <= messages.length ? messages[level - 1] : messages[messages.length - 1];
+    
+    scorePopups.push({
+        x: canvas.width / 2,
+        y: canvas.height / 3,
+        value: message,
+        opacity: 1,
+        velocityY: -1,
+        isDifficultyPopup: true
+    });
 } 
