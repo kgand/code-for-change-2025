@@ -416,52 +416,90 @@ function initBackgroundLayers() {
     }
     
     // Create stars (fewer on mobile)
-    const starCount = settings.isMobileDevice ? 50 : 100;
+    const starCount = settings.isMobileDevice ? 50 : 150;
     generateStars(starCount);
     
     // Create clouds (fewer on mobile)
-    const cloudCount = settings.isMobileDevice ? 5 : 10;
+    const cloudCount = settings.isMobileDevice ? 5 : 15;
     generateClouds(cloudCount);
     
     // Create background layers using preloaded images if available
-    const backgroundImageNames = ['bg-layer1', 'bg-layer2', 'bg-layer3'];
+    const backgroundImageNames = ['bg-layer1', 'bg-layer2', 'bg-layer3', 'bg-layer4', 'bg-layer5'];
+    const layerDepths = [0.1, 0.2, 0.4, 0.7, 1.0]; // Depth factors for parallax effect
+    const layerOpacities = [0.2, 0.3, 0.4, 0.6, 0.8]; // Opacity for each layer
     
-    for (let i = 0; i < 3; i++) {
-        const speedFactor = (i + 1) / 3;
+    for (let i = 0; i < backgroundImageNames.length; i++) {
+        // Use preloaded images if available, otherwise create placeholders
+        const image = window.gameAssets && window.gameAssets.images[backgroundImageNames[i]] ? 
+            window.gameAssets.images[backgroundImageNames[i]] : 
+            { width: canvas.width, height: canvas.height };
+            
         const layer = {
-            // Use preloaded images if available, otherwise create placeholders
-            image: window.gameAssets && window.gameAssets.images[backgroundImageNames[i]] ? 
-                window.gameAssets.images[backgroundImageNames[i]] : 
-                { width: canvas.width, height: canvas.height },
+            image: image,
             x: 0,
-            scrollSpeed: 0.5 * speedFactor,
-            opacity: 0.3 - (i * 0.1)
+            y: 0, // Add y position for vertical parallax
+            scrollSpeed: 0.2 + (layerDepths[i] * 0.8), // Speed based on depth
+            verticalScrollSpeed: 0.05 * layerDepths[i], // Vertical parallax speed
+            opacity: layerOpacities[i],
+            depth: layerDepths[i],
+            width: canvas.width,
+            height: canvas.height,
+            scale: 1 + (0.2 * (1 - layerDepths[i])) // Scale based on depth
         };
         backgroundLayers.push(layer);
     }
-}
-
-// Generate stars for background
-function generateStars(count) {
-    for (let i = 0; i < count; i++) {
-        stars.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2 + 0.5,
-            phase: Math.random() * Math.PI * 2
+    
+    // Add foreground elements (silhouettes, etc.)
+    if (window.gameAssets && window.gameAssets.images['foreground']) {
+        backgroundLayers.push({
+            image: window.gameAssets.images['foreground'],
+            x: 0,
+            y: canvas.height - (window.gameAssets.images['foreground'].height || 100),
+            scrollSpeed: 1.2, // Faster than other layers
+            verticalScrollSpeed: 0,
+            opacity: 0.9,
+            depth: 1.2,
+            width: canvas.width,
+            height: window.gameAssets.images['foreground'].height || 100,
+            scale: 1
         });
     }
 }
 
-// Generate clouds for background
+// Generate stars for background with enhanced properties
+function generateStars(count) {
+    for (let i = 0; i < count; i++) {
+        const depth = Math.random() * 0.8 + 0.2; // Random depth between 0.2 and 1.0
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * (canvas.height * 0.7), // Stars only in top 70% of screen
+            size: Math.random() * 2 + 0.5,
+            phase: Math.random() * Math.PI * 2,
+            twinkleSpeed: Math.random() * 0.01 + 0.005,
+            depth: depth,
+            speed: 0.1 + (depth * 0.3) // Speed based on depth
+        });
+    }
+}
+
+// Generate clouds with enhanced properties
 function generateClouds(count) {
     for (let i = 0; i < count; i++) {
+        const depth = Math.random() * 0.8 + 0.2; // Random depth between 0.2 and 1.0
+        const size = (Math.random() * 30 + 20) * (1 + (1 - depth)); // Size based on depth
+        
         clouds.push({
             x: Math.random() * canvas.width,
             y: Math.random() * (canvas.height * 0.5),
-            size: Math.random() * 30 + 20,
-            opacity: Math.random() * 0.3 + 0.1,
-            speed: Math.random() * 0.2 + 0.1
+            size: size,
+            opacity: 0.3 + (depth * 0.5), // Opacity based on depth
+            speed: 0.2 + (depth * 0.8), // Speed based on depth
+            depth: depth,
+            cloudParts: Array(Math.floor(Math.random() * 3) + 3).fill().map(() => ({
+                offsetX: (Math.random() - 0.5) * size,
+                offsetY: (Math.random() - 0.5) * size * 0.5,
+                size: size * (Math.random() * 0.4 + 0.6)
+            }))
         });
     }
 }
@@ -1089,61 +1127,109 @@ function drawGame() {
     }
 }
 
-// Draw background with device-aware optimizations
+// Draw background with enhanced parallax effects
 function drawBackground() {
-    // Draw sky
-    ctx.fillStyle = '#0f3460';
+    // Draw sky gradient
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    skyGradient.addColorStop(0, '#0a1a3f'); // Dark blue at top
+    skyGradient.addColorStop(0.5, '#0f3460'); // Medium blue in middle
+    skyGradient.addColorStop(1, '#1a4a8c'); // Lighter blue at bottom
+    
+    ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Draw stars and parallax elements only if not in low performance mode
     if (!settings.lowPerformanceMode) {
-        // Draw parallax background layers
-        backgroundLayers.forEach(layer => {
-            ctx.globalAlpha = layer.opacity;
-            ctx.drawImage(
-                layer.image,
-                layer.x,
-                0,
-                canvas.width,
-                canvas.height
-            );
-            
-            // Scroll the background layer
-            layer.x -= layer.scrollSpeed * settings.gameSpeed;
-            
-            // If the background has scrolled past its width, reset it
-            if (layer.x <= -canvas.width) {
-                layer.x = 0;
-            }
-        });
-        
-        // Draw animated stars
+        // Draw animated stars with parallax effect
         stars.forEach(star => {
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.2 + Math.sin(animationTime * 0.003 + star.phase) * 0.1})`;
+            // Calculate star brightness with enhanced twinkling
+            const brightness = 0.2 + Math.sin(animationTime * star.twinkleSpeed + star.phase) * 0.15;
+            ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+            
+            // Move stars based on depth (parallax)
+            star.x -= star.speed * settings.gameSpeed;
+            
+            // Wrap stars around when they go off-screen
+            if (star.x < 0) {
+                star.x = canvas.width;
+                star.y = Math.random() * (canvas.height * 0.7);
+            }
+            
+            // Draw the star
             ctx.beginPath();
             ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Draw clouds with depth effect
+        // Draw parallax background layers
+        backgroundLayers.forEach(layer => {
+            ctx.globalAlpha = layer.opacity;
+            
+            // Calculate scaled dimensions
+            const scaledWidth = layer.width * layer.scale;
+            const scaledHeight = layer.height * layer.scale;
+            
+            // Draw the layer with proper scaling
+            ctx.drawImage(
+                layer.image,
+                layer.x,
+                layer.y,
+                scaledWidth,
+                scaledHeight
+            );
+            
+            // Draw a second copy for seamless scrolling
+            ctx.drawImage(
+                layer.image,
+                layer.x + scaledWidth,
+                layer.y,
+                scaledWidth,
+                scaledHeight
+            );
+            
+            // Scroll the background layer horizontally
+            layer.x -= layer.scrollSpeed * settings.gameSpeed;
+            
+            // Apply subtle vertical movement for some layers
+            layer.y += Math.sin(animationTime * 0.0005) * layer.verticalScrollSpeed;
+            
+            // If the background has scrolled past its width, reset it
+            if (layer.x <= -scaledWidth) {
+                layer.x = 0;
+            }
+        });
+        
+        // Draw clouds with enhanced depth effect
         clouds.forEach(cloud => {
             ctx.globalAlpha = cloud.opacity;
             ctx.fillStyle = '#ffffff';
             
-            // Draw cloud (simple shape)
-            ctx.beginPath();
-            ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
-            ctx.arc(cloud.x + cloud.size * 0.5, cloud.y - cloud.size * 0.2, cloud.size * 0.7, 0, Math.PI * 2);
-            ctx.arc(cloud.x - cloud.size * 0.5, cloud.y - cloud.size * 0.1, cloud.size * 0.6, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Move clouds
+            // Move clouds based on depth (parallax)
             cloud.x -= cloud.speed * settings.gameSpeed;
+            
+            // Draw cloud with multiple parts for more natural look
+            cloud.cloudParts.forEach(part => {
+                ctx.beginPath();
+                ctx.arc(
+                    cloud.x + part.offsetX, 
+                    cloud.y + part.offsetY, 
+                    part.size / 2, 
+                    0, Math.PI * 2
+                );
+                ctx.fill();
+            });
             
             // If cloud moves off screen, reset it
             if (cloud.x + cloud.size * 2 < 0) {
                 cloud.x = canvas.width + cloud.size;
                 cloud.y = Math.random() * canvas.height * 0.5;
+                
+                // Regenerate cloud parts for variety
+                cloud.cloudParts = Array(Math.floor(Math.random() * 3) + 3).fill().map(() => ({
+                    offsetX: (Math.random() - 0.5) * cloud.size,
+                    offsetY: (Math.random() - 0.5) * cloud.size * 0.5,
+                    size: cloud.size * (Math.random() * 0.4 + 0.6)
+                }));
             }
         });
     } else {
