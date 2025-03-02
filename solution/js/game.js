@@ -90,6 +90,16 @@ let obstacles = [];
 let collectibles = [];
 let scorePopups = [];
 
+// Create game object to expose to mobile controls
+window.game = {
+    player: player,
+    settings: settings,
+    gameActive: gameActive,
+    gamePaused: gamePaused,
+    pauseGame: pauseGame,
+    resumeGame: resumeGame
+};
+
 // Set difficulty
 function setDifficulty(difficulty) {
     currentDifficulty = difficulty;
@@ -150,6 +160,12 @@ function init() {
     // Update UI
     updateScore();
     updateWasteCollected();
+    
+    // Update game object reference
+    window.game.player = player;
+    window.game.settings = settings;
+    window.game.gameActive = gameActive;
+    window.game.gamePaused = gamePaused;
 }
 
 // Display environmental facts
@@ -172,6 +188,17 @@ function startGame() {
     gamePaused = false;
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
+    
+    // Update game state in window.game
+    window.game.gameActive = gameActive;
+    window.game.gamePaused = gamePaused;
+    
+    // Initialize mobile controls if available
+    if (typeof mobileControls !== 'undefined') {
+        setTimeout(() => {
+            mobileControls.init();
+        }, 500); // Small delay to ensure game is fully initialized
+    }
 }
 
 // Pause the game
@@ -187,6 +214,14 @@ function pauseGame() {
     
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.remove('hidden');
+    
+    // Update game state in window.game
+    window.game.gamePaused = gamePaused;
+    
+    // Hide mobile controls if available
+    if (typeof mobileControls !== 'undefined') {
+        mobileControls.hide();
+    }
 }
 
 // Resume the game
@@ -198,6 +233,14 @@ function resumeGame() {
     gamePausedScreen.classList.add('hidden');
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
+    
+    // Update game state in window.game
+    window.game.gamePaused = gamePaused;
+    
+    // Show mobile controls if available
+    if (typeof mobileControls !== 'undefined') {
+        mobileControls.show();
+    }
 }
 
 // Game loop
@@ -264,6 +307,11 @@ function updateGame(deltaTime) {
         settings.collectibleFrequency += 0.001 * settings.difficultyIncreaseRate;
         settings.lastDifficultyIncrease = animationTime;
     }
+    
+    // Update game object reference
+    window.game.player = player;
+    window.game.gameActive = gameActive;
+    window.game.gamePaused = gamePaused;
 }
 
 // Update player position
@@ -736,6 +784,15 @@ function gameOver() {
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.remove('hidden');
+    
+    // Update game state in window.game
+    window.game.gameActive = gameActive;
+    window.game.gamePaused = gamePaused;
+    
+    // Hide mobile controls if available
+    if (typeof mobileControls !== 'undefined') {
+        mobileControls.hide();
+    }
 }
 
 // Event listeners
@@ -787,6 +844,11 @@ window.addEventListener('resize', () => {
     if (gameActive) {
         canvas.width = gamePlayScreen.offsetWidth;
         canvas.height = gamePlayScreen.offsetHeight;
+    }
+    
+    // Reinitialize mobile controls on resize if available
+    if (typeof mobileControls !== 'undefined') {
+        mobileControls.handleOrientationChange();
     }
 });
 
