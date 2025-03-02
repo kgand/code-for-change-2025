@@ -749,4 +749,206 @@ button:active {
     #sorting-game-canvas {
         height: 250px;
     }
+}
+
+/* Accessibility Styles */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.accessibility-controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 30;
+    display: flex;
+    gap: 5px;
+}
+
+.a11y-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: 2px solid white;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    padding: 0;
+}
+
+.a11y-button[aria-pressed="true"] {
+    background-color: #4cc9f0;
+    border-color: white;
+}
+
+.a11y-button:hover {
+    transform: scale(1.1);
+    background-color: rgba(76, 201, 240, 0.7);
+}
+
+.a11y-dialog {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    background-color: rgba(22, 33, 62, 0.95);
+    border-radius: 10px;
+    padding: 20px;
+    z-index: 100;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    border: 2px solid #4cc9f0;
+}
+
+.a11y-dialog h2 {
+    color: #4cc9f0;
+    margin-top: 0;
+}
+
+.a11y-dialog-content {
+    margin-bottom: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.a11y-dialog ul {
+    padding-left: 20px;
+    text-align: left;
+}
+
+.a11y-dialog li {
+    margin-bottom: 10px;
+}
+
+.a11y-dialog button {
+    margin-top: 10px;
+}
+
+/* Focus Styles */
+:focus {
+    outline: 3px solid #f72585;
+    outline-offset: 2px;
+}
+
+button:focus, 
+.control-button:focus, 
+.difficulty-button:focus,
+.icon-button:focus,
+.a11y-button:focus {
+    outline: 3px solid #f72585;
+    outline-offset: 2px;
+    transform: scale(1.05);
+}
+
+/* High Contrast Mode */
+body.high-contrast {
+    --bg-color: #000000;
+    --text-color: #ffffff;
+    --primary-color: #ffff00;
+    --secondary-color: #00ffff;
+    --accent-color: #ff00ff;
+    --button-bg: #ffffff;
+    --button-text: #000000;
+    --highlight: #ffff00;
+}
+
+body.high-contrast #game-container {
+    background-color: var(--bg-color);
+    border-color: var(--highlight);
+}
+
+body.high-contrast h1, 
+body.high-contrast h2, 
+body.high-contrast h3 {
+    color: var(--primary-color);
+    text-shadow: none;
+}
+
+body.high-contrast p,
+body.high-contrast div,
+body.high-contrast span:not(.a11y-icon),
+body.high-contrast td,
+body.high-contrast th {
+    color: var(--text-color);
+}
+
+body.high-contrast button {
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border: 2px solid var(--primary-color);
+    box-shadow: none;
+}
+
+body.high-contrast .game-screen {
+    background: var(--bg-color);
+}
+
+body.high-contrast .waste-icon.plastic {
+    background-color: var(--primary-color);
+}
+
+body.high-contrast .waste-icon.paper {
+    background-color: var(--secondary-color);
+}
+
+body.high-contrast .waste-icon.metal {
+    background-color: var(--accent-color);
+}
+
+body.high-contrast .control-key {
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border: 1px solid var(--primary-color);
+}
+
+body.high-contrast #game-canvas {
+    border: 3px solid var(--highlight);
+}
+
+/* Larger Text Mode */
+body.larger-text {
+    font-size: 125%;
+}
+
+body.larger-text h1 {
+    font-size: 54px;
+}
+
+body.larger-text h2 {
+    font-size: 36px;
+}
+
+body.larger-text h3 {
+    font-size: 28px;
+}
+
+body.larger-text p, 
+body.larger-text div, 
+body.larger-text span {
+    font-size: 20px;
+    line-height: 1.6;
+}
+
+body.larger-text button {
+    font-size: 22px;
+    padding: 16px 32px;
+}
+
+body.larger-text .control-key {
+    font-size: 18px;
+    padding: 8px 12px;
 } 

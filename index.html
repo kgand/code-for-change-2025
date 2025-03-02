@@ -5,93 +5,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Subwaste Surfer - Wall-E Edition</title>
     <link rel="stylesheet" href="solution/css/style.css">
+    <meta name="description" content="An educational game about waste sorting featuring Wall-E. Help Wall-E collect and sort waste while avoiding obstacles!">
 </head>
 <body>
-    <div id="game-container">
-        <div id="game-start" class="game-screen">
-            <h1>Subwaste Surfer</h1>
+    <div id="game-container" role="application" aria-label="Subwaste Surfer Game">
+        <div id="accessibility-controls" class="accessibility-controls">
+            <button id="high-contrast-toggle" class="a11y-button" aria-pressed="false" aria-label="Toggle high contrast mode">
+                <span class="a11y-icon">🎨</span>
+            </button>
+            <button id="larger-text-toggle" class="a11y-button" aria-pressed="false" aria-label="Toggle larger text">
+                <span class="a11y-icon">Aa</span>
+            </button>
+            <button id="screen-reader-info" class="a11y-button" aria-label="Screen reader information">
+                <span class="a11y-icon">ℹ️</span>
+            </button>
+        </div>
+        
+        <div id="game-start" class="game-screen" role="dialog" aria-labelledby="game-title">
+            <h1 id="game-title">Subwaste Surfer</h1>
             <h2>Wall-E Edition</h2>
             <p>Help Wall-E collect and sort waste while avoiding obstacles!</p>
-            <div class="scoring-info">
-                <h3>Scoring System</h3>
-                <div class="waste-types">
+            <div class="scoring-info" aria-labelledby="scoring-title">
+                <h3 id="scoring-title">Scoring System</h3>
+                <div class="waste-types" aria-label="Waste type scoring">
                     <div class="waste-type">
-                        <div class="waste-icon plastic"></div>
+                        <div class="waste-icon plastic" aria-hidden="true"></div>
                         <span>Plastic: 10 pts</span>
                     </div>
                     <div class="waste-type">
-                        <div class="waste-icon paper"></div>
+                        <div class="waste-icon paper" aria-hidden="true"></div>
                         <span>Paper: 15 pts</span>
                     </div>
                     <div class="waste-type">
-                        <div class="waste-icon metal"></div>
+                        <div class="waste-icon metal" aria-hidden="true"></div>
                         <span>Metal: 25 pts</span>
                     </div>
                 </div>
                 <p class="combo-info">Collect waste quickly to build combos and multiply your score!</p>
             </div>
-            <div class="fact-container">
-                <h3>Did You Know?</h3>
+            <div class="fact-container" aria-labelledby="fact-title">
+                <h3 id="fact-title">Did You Know?</h3>
                 <p id="start-screen-fact" class="environmental-fact"></p>
             </div>
-            <div class="difficulty-selector">
-                <h3>Select Difficulty</h3>
-                <div class="difficulty-options">
-                    <button id="easy-button" class="difficulty-button selected" data-difficulty="easy">Easy</button>
-                    <button id="medium-button" class="difficulty-button" data-difficulty="medium">Medium</button>
-                    <button id="hard-button" class="difficulty-button" data-difficulty="hard">Hard</button>
+            <div class="difficulty-selector" aria-labelledby="difficulty-title">
+                <h3 id="difficulty-title">Select Difficulty</h3>
+                <div class="difficulty-options" role="radiogroup" aria-label="Difficulty level">
+                    <button id="easy-button" class="difficulty-button selected" data-difficulty="easy" role="radio" aria-checked="true">Easy</button>
+                    <button id="medium-button" class="difficulty-button" data-difficulty="medium" role="radio" aria-checked="false">Medium</button>
+                    <button id="hard-button" class="difficulty-button" data-difficulty="hard" role="radio" aria-checked="false">Hard</button>
                 </div>
             </div>
             <button id="start-button">Start Game</button>
             
-            <div class="controls-info">
+            <div class="controls-info" aria-labelledby="control-title">
+                <h3 id="control-title" class="sr-only">Game Controls</h3>
                 <div><span class="control-key">←</span> <span class="control-key">→</span> Move left/right</div>
                 <div><span class="control-key">↑</span> <span class="control-key">Space</span> Jump</div>
                 <div><span class="control-key">P</span> <span class="control-key">Esc</span> Pause game</div>
                 <div><span class="control-key">M</span> Toggle mute</div>
             </div>
         </div>
-        <div id="game-play" class="game-screen hidden">
+        <div id="game-play" class="game-screen hidden" role="application" aria-label="Gameplay area">
             <div id="score-container">
-                <div id="score">Score: 0</div>
-                <div id="waste-collected">Waste Collected: 0</div>
+                <div id="score" aria-live="polite">Score: 0</div>
+                <div id="waste-collected" aria-live="polite">Waste Collected: 0</div>
             </div>
             <div id="game-controls">
                 <button id="pause-button" class="icon-button" aria-label="Pause Game">⏸️</button>
                 <button id="mute-button" class="icon-button" aria-label="Toggle Mute">🔊</button>
             </div>
-            <canvas id="game-canvas"></canvas>
+            <canvas id="game-canvas" aria-label="Game canvas where gameplay occurs" role="img"></canvas>
+            <div id="game-announcer" class="sr-only" aria-live="assertive"></div>
         </div>
-        <div id="game-paused" class="game-screen hidden">
-            <h1>Game Paused</h1>
+        <div id="game-paused" class="game-screen hidden" role="dialog" aria-labelledby="paused-title">
+            <h1 id="paused-title">Game Paused</h1>
             <p>Take a break and think about the environment!</p>
             <div class="fact-container">
                 <h3>Environmental Fact</h3>
                 <p id="pause-screen-fact" class="environmental-fact"></p>
             </div>
-            <div class="sound-controls">
-                <button id="music-button" class="control-button">Music Off</button>
-                <button id="sound-effects-button" class="control-button">Sound Effects Off</button>
+            <div class="sound-controls" role="group" aria-label="Sound Controls">
+                <button id="music-button" class="control-button" aria-pressed="false">Music Off</button>
+                <button id="sound-effects-button" class="control-button" aria-pressed="false">Sound Effects Off</button>
             </div>
             <button id="resume-button">Resume Game</button>
             <button id="restart-from-pause-button" class="secondary-button">Restart</button>
             
-            <div class="controls-info">
+            <div class="controls-info" aria-labelledby="pause-controls-title">
+                <h3 id="pause-controls-title" class="sr-only">Game Controls</h3>
                 <div><span class="control-key">←</span> <span class="control-key">→</span> Move left/right</div>
                 <div><span class="control-key">↑</span> <span class="control-key">Space</span> Jump</div>
                 <div><span class="control-key">P</span> <span class="control-key">Esc</span> Pause/Resume</div>
                 <div><span class="control-key">M</span> Toggle mute</div>
             </div>
         </div>
-        <div id="game-over" class="game-screen hidden">
-            <h1>Game Over</h1>
-            <div id="final-score">Score: 0</div>
-            <div id="final-waste">Waste Collected: 0</div>
+        <div id="game-over" class="game-screen hidden" role="dialog" aria-labelledby="game-over-title">
+            <h1 id="game-over-title">Game Over</h1>
+            <div id="final-score" aria-live="polite">Score: 0</div>
+            <div id="final-waste" aria-live="polite">Waste Collected: 0</div>
+            
+            <div class="leaderboard-container" aria-labelledby="leaderboard-title">
+                <h3 id="leaderboard-title">High Scores</h3>
+                <div id="leaderboard" class="leaderboard">
+                    <div id="leaderboard-loading">Loading high scores...</div>
+                    <table id="leaderboard-table" class="hidden" aria-label="Leaderboard scores">
+                        <thead>
+                            <tr>
+                                <th scope="col">Rank</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Score</th>
+                                <th scope="col">Waste</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-entries">
+                            <!-- Leaderboard entries will be dynamically inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="submit-score-form" aria-labelledby="submit-score-title">
+                    <h4 id="submit-score-title">Submit Your Score</h4>
+                    <form id="score-form">
+                        <label for="player-name" class="sr-only">Your Name</label>
+                        <input type="text" id="player-name" placeholder="Your Name" maxlength="15" required aria-required="true">
+                        <button type="submit" id="submit-score-button">Submit Score</button>
+                    </form>
+                    <div id="score-submit-message" aria-live="polite"></div>
+                </div>
+            </div>
+            
             <div class="fact-container">
                 <h3>Environmental Fact</h3>
                 <p id="game-over-fact" class="environmental-fact"></p>
             </div>
             <button id="restart-button">Play Again</button>
+        </div>
+        
+        <div id="a11y-dialog" class="a11y-dialog hidden" role="dialog" aria-labelledby="a11y-dialog-title" aria-modal="true">
+            <h2 id="a11y-dialog-title">Accessibility Information</h2>
+            <div class="a11y-dialog-content">
+                <p>This game supports the following accessibility features:</p>
+                <ul>
+                    <li>Keyboard navigation: Use Tab to move between elements, Enter/Space to select</li>
+                    <li>Screen reader announcements for game events</li>
+                    <li>High contrast mode: Improves visibility</li>
+                    <li>Larger text option: Makes text easier to read</li>
+                    <li>Customizable audio settings</li>
+                </ul>
+                <p>Additional keyboard shortcuts:</p>
+                <ul>
+                    <li><strong>H</strong>: Toggle high contrast mode</li>
+                    <li><strong>T</strong>: Toggle larger text</li>
+                    <li><strong>F</strong>: Focus trap (keeps focus within game area)</li>
+                </ul>
+            </div>
+            <button id="close-a11y-dialog" aria-label="Close accessibility information">Close</button>
         </div>
     </div>
     
@@ -99,6 +167,8 @@
     <script src="solution/js/sound-manager.js"></script>
     <script src="solution/js/touch-controls.js"></script>
     <script src="solution/js/waste-sorting-game.js"></script>
+    <script src="solution/js/leaderboard.js"></script>
+    <script src="solution/js/accessibility.js"></script>
     <script src="solution/js/game.js"></script>
 </body>
 </html> 
