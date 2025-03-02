@@ -10,26 +10,33 @@ In Subwaste Surfer, you play as Wall-E, the waste-collecting robot, navigating t
 
 - Endless runner gameplay with increasing difficulty
 - Three-lane system for navigation
-- Multiple types of collectible waste items
+- Multiple types of collectible waste items with different point values
+- Combo system for collecting waste items in quick succession
+- Difficulty selector (Easy, Medium, Hard) with adjustable game parameters
+- Educational environmental facts that change based on collected waste types
+- Pause functionality with keyboard shortcuts
 - Score tracking based on distance and waste collected
 - Simple and intuitive controls
 - Responsive design that works on various screen sizes
 
 ## How to Play
 
-1. Click the "Start Game" button to begin
-2. Use the left and right arrow keys to switch lanes
-3. Use the up arrow key or spacebar to jump over obstacles
-4. Collect waste items to increase your score
-5. Avoid obstacles to stay in the game
-6. Try to achieve the highest score possible!
+1. Select your preferred difficulty level
+2. Click the "Start Game" button to begin
+3. Use the left and right arrow keys to switch lanes
+4. Use the up arrow key or spacebar to jump over obstacles
+5. Collect waste items to increase your score
+6. Collect items quickly to build combos and multiply your score
+7. Press P or Escape to pause the game
+8. Avoid obstacles to stay in the game
+9. Try to achieve the highest score possible!
 
 ## Controls
 
 - **Left Arrow**: Move left
 - **Right Arrow**: Move right
 - **Up Arrow / Spacebar**: Jump
-- **Down Arrow**: (Future feature: slide under obstacles)
+- **P / Escape**: Pause game
 
 ## Technical Details
 
@@ -42,17 +49,27 @@ In Subwaste Surfer, you play as Wall-E, the waste-collecting robot, navigating t
 
 ```
 subwaste-surfer/
-├── index.html          # Main HTML file
-├── solution/           # Game code
-│   ├── js/             # JavaScript files
-│   │   └── game.js     # Main game logic
-│   └── css/            # CSS files
-│       └── style.css   # Game styling
-└── assets/             # Game assets
-    ├── images/         # Image files
-    ├── sounds/         # Sound files
-    └── models/         # 3D models (future feature)
+├── index.html                      # Main HTML file
+├── solution/                       # Game code
+│   ├── js/                         # JavaScript files
+│   │   ├── game.js                 # Main game logic
+│   │   └── environmental-facts.js  # Environmental facts data
+│   └── css/                        # CSS files
+│       └── style.css               # Game styling
+└── assets/                         # Game assets
+    ├── images/                     # Image files
+    ├── sounds/                     # Sound files
+    └── models/                     # 3D models (future feature)
 ```
+
+## Development Approach
+
+This project was developed using a feature-branch Git workflow:
+
+1. Each feature was developed in its own branch
+2. Professional commit messages were used following conventional commit format
+3. Features were merged into main using non-fast-forward merges
+4. Code was organized in a modular, maintainable structure
 
 ## Future Enhancements
 
