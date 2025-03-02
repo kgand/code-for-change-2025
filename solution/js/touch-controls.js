@@ -131,10 +131,21 @@ class TouchControls {
             this.game.movePlayer(1);
         });
         
+        // Create pause button
+        const pauseButton = document.createElement('button');
+        pauseButton.className = 'mobile-control-button';
+        pauseButton.id = 'mobile-pause';
+        pauseButton.innerHTML = '&#10074;&#10074;'; // Pause symbol
+        pauseButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.game.togglePause();
+        });
+        
         // Append buttons to container
         controlsContainer.appendChild(leftButton);
         controlsContainer.appendChild(jumpButton);
         controlsContainer.appendChild(rightButton);
+        controlsContainer.appendChild(pauseButton);
         
         // Add to game play screen
         const gamePlayScreen = document.getElementById('game-play');
