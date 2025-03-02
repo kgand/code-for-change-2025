@@ -53,6 +53,27 @@ let backgroundLayers = []; // Array to hold background parallax layers
 let powerUps = []; // Array to hold active power-ups
 let activePowerUps = {}; // Object to track active power-up effects
 
+// Game settings and variables
+let settings = {
+    lanes: 3,
+    laneWidth: 0,
+    playerSpeed: 0.4,
+    jumpHeight: 100,
+    jumpDuration: 500,
+    gameSpeed: 1,
+    baseObstacleFrequency: 0.02,
+    baseCollectibleFrequency: 0.01,
+    obstacleFrequency: 0.02,
+    collectibleFrequency: 0.01,
+    powerUpFrequency: 0.002,
+    difficultyIncrementInterval: 20000,  // 20 seconds
+    maxObstacles: 15,                    // Maximum obstacles to render
+    maxCollectibles: 15,                 // Maximum collectibles to render
+    maxParticles: 100,                   // Maximum particles to render
+    targetFPS: 60,                       // Target frames per second
+    frameTimeLimit: 16.67                // ~60 FPS in ms (1000/60)
+};
+
 // Difficulty settings
 const difficultySettings = {
     easy: {
@@ -79,25 +100,6 @@ const difficultySettings = {
         jumpForce: -11,
         wasteSortingThreshold: 8
     }
-};
-
-// Game settings
-const settings = {
-    gameSpeed: 5, // Will be set based on difficulty
-    gravity: 0.5,
-    jumpForce: -10, // Will be set based on difficulty
-    laneWidth: 200,
-    lanes: 3,
-    obstacleFrequency: 0.02, // Will be set based on difficulty
-    collectibleFrequency: 0.01, // Will be set based on difficulty
-    difficultyIncreaseInterval: 15000, // Increase difficulty every 15 seconds (increased from 10 seconds)
-    lastDifficultyIncrease: 0,
-    difficultyIncreaseRate: 0.3, // Will be set based on difficulty
-    comboTimeWindow: 2000, // Time window in ms for combo
-    maxComboMultiplier: 5,
-    maxDifficultyLevel: 5, // Maximum number of difficulty increases
-    comboDisplayTime: 1000, // Time to display combo multiplier
-    comboMultiplierStep: 0.1 // Step to increase combo multiplier
 };
 
 // Waste type point values
@@ -140,6 +142,20 @@ const powerUpTypes = {
     }
 };
 
+// Performance monitoring variables
+let performanceMetrics = {
+    fps: 0,
+    frameTimes: [],
+    lastFpsUpdate: 0,
+    objectCounts: {
+        obstacles: 0,
+        collectibles: 0,
+        particles: 0,
+        powerUps: 0
+    },
+    showMonitor: false
+};
+
 // Set difficulty
 function setDifficulty(difficulty) {
     currentDifficulty = difficulty;
@@ -167,99 +183,153 @@ function init() {
     canvas.width = gamePlayScreen.offsetWidth;
     canvas.height = gamePlayScreen.offsetHeight;
     
+    // Calculate lane width
+    settings.laneWidth = canvas.width / settings.lanes;
+    
+    // Initialize player
+    player = {
+        x: (Math.floor(settings.lanes / 2) * settings.laneWidth) - (playerWidth / 2),
+        y: canvas.height - playerHeight - 20,
+        width: playerWidth,
+        height: playerHeight,
+        lane: Math.floor(settings.lanes / 2),
+        jumping: false,
+        jumpHeight: 0,
+        jumpProgress: 0,
+        fallSpeed: 0,
+        sprite: {
+            frameX: 0,
+            frameY: 0,
+            maxFrame: 3,
+            animationSpeed: 5,
+            frameTimer: 0
+        }
+    };
+    
     // Reset game state
+    obstacles = [];
+    collectibles = [];
+    particles = [];
+    scorePopups = [];
+    powerUps = [];
+    activePowerUps = {};
     score = 0;
     wasteCollected = 0;
+    gameActive = true;
+    gamePaused = false;
+    lastObstacleTime = 0;
+    lastCollectibleTime = 0;
+    lastPowerUpTime = 0;
+    lastTime = 0;
+    animationTime = 0;
     comboCount = 0;
     comboTimer = 0;
     comboMultiplier = 1;
-    obstacles = [];
-    collectibles = [];
-    scorePopups = [];
-    particles = [];
-    animationTime = 0;
-    lastCollectTime = 0;
-    lastCollectedWasteType = null;
+    comboDisplayTime = 0;
+    
+    // Reset performance metrics
+    performanceMetrics.frameTimes = [];
+    performanceMetrics.fps = 0;
+    performanceMetrics.lastFpsUpdate = 0;
+    
+    // Reset difficulty settings
+    settings.lastDifficultyIncrease = 0;
+    
+    // Initialize settings based on selected difficulty
+    setDifficulty(selectedDifficulty);
     
     // Initialize background layers
     initBackgroundLayers();
-    
-    // Reset mini-game state
-    wasteSortingEnabled = true;
-    inMiniGame = false;
-    
-    // Apply difficulty settings
-    settings.gameSpeed = difficultySettings[currentDifficulty].gameSpeed;
-    settings.obstacleFrequency = difficultySettings[currentDifficulty].obstacleFrequency;
-    settings.collectibleFrequency = difficultySettings[currentDifficulty].collectibleFrequency;
-    settings.lastDifficultyIncrease = 0;
-    
-    // Create player
-    player = {
-        x: canvas.width / 2,
-        y: canvas.height - 100,
-        width: 50,
-        height: 70,
-        velocityY: 0,
-        lane: 1, // Middle lane
-        isJumping: false,
-        animationState: 0, // For simple animation
-        eyeHeight: -20 // For eye animation
-    };
     
     // Update UI
     updateScore();
     updateWasteCollected();
     
-    // Set up event listeners
-    startButton.addEventListener('click', startGame);
-    pauseButton.addEventListener('click', pauseGame);
-    resumeButton.addEventListener('click', resumeGame);
-    restartButton.addEventListener('click', startGame);
-    restartFromPauseButton.addEventListener('click', startGame);
+    // Create object pools for better performance
+    initializeObjectPools();
     
-    difficultyButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Reset previously selected button
-            difficultyButtons.forEach(btn => btn.classList.remove('selected'));
-            // Set selected class on clicked button
-            button.classList.add('selected');
-            // Update current difficulty
-            currentDifficulty = button.dataset.difficulty;
-        });
-    });
-    
-    // Check if we're on a touch device
-    if (typeof TouchControls !== 'undefined' && TouchControls.isTouchDevice()) {
-        console.log('Touch device detected - enabling touch controls');
-        document.body.classList.add('touch-device');
-    }
-    
-    // Initialize waste sorting game if available
-    if (typeof WasteSortingGame !== 'undefined') {
-        wasteSortingGame = new WasteSortingGame({
-            addScore: (bonus) => {
-                score += bonus;
-                updateScore();
-            },
-            resumeAfterMiniGame: () => {
-                inMiniGame = false;
-                resumeGame();
-            }
-        });
-    }
-    
-    // Initialize sound manager if available
+    // Reset and initialize sound manager if available
     if (typeof soundManager !== 'undefined') {
-        soundManager.preloadSounds().then(() => {
-            console.log('All sounds loaded successfully');
-        }).catch(error => {
-            console.warn('Error loading sounds:', error);
-        });
+        soundManager.resetAll();
     }
     
-    // Display random environmental facts
-    displayEnvironmentalFacts();
+    // Set initial high score
+    highScore = parseInt(localStorage.getItem('subwasteSurferHighScore')) || 0;
+    
+    // Announce game start for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('gameStart');
+    }
+    
+    // Set up keyboard event for performance monitor toggle
+    document.addEventListener('keydown', (event) => {
+        // Toggle performance monitor with F key
+        if (event.key === 'F' && event.ctrlKey) {
+            performanceMetrics.showMonitor = !performanceMetrics.showMonitor;
+            event.preventDefault();
+        }
+    });
+}
+
+// Initialize object pools for better performance
+function initializeObjectPools() {
+    // Pre-allocate particles for better performance
+    particlePool = new Array(settings.maxParticles * 2).fill().map(() => ({
+        x: 0, 
+        y: 0, 
+        velocityX: 0, 
+        velocityY: 0, 
+        size: 0, 
+        color: '', 
+        opacity: 0, 
+        life: 0,
+        active: false
+    }));
+    
+    // Pre-allocate score popups for better performance
+    scorePopupPool = new Array(20).fill().map(() => ({
+        x: 0, 
+        y: 0, 
+        value: 0, 
+        opacity: 0, 
+        velocityY: 0, 
+        combo: null,
+        isPowerUpPopup: false,
+        color: '',
+        active: false
+    }));
+}
+
+// Get a particle from the pool
+function getParticleFromPool() {
+    // Find an inactive particle
+    for (let i = 0; i < particlePool.length; i++) {
+        if (!particlePool[i].active) {
+            particlePool[i].active = true;
+            return particlePool[i];
+        }
+    }
+    
+    // If no inactive particles, reuse the oldest one
+    const particle = particlePool[0];
+    particlePool.push(particlePool.shift());
+    return particle;
+}
+
+// Get a score popup from the pool
+function getScorePopupFromPool() {
+    // Find an inactive score popup
+    for (let i = 0; i < scorePopupPool.length; i++) {
+        if (!scorePopupPool[i].active) {
+            scorePopupPool[i].active = true;
+            return scorePopupPool[i];
+        }
+    }
+    
+    // If no inactive score popups, reuse the oldest one
+    const popup = scorePopupPool[0];
+    scorePopupPool.push(scorePopupPool.shift());
+    return popup;
 }
 
 // Initialize background parallax layers
@@ -435,10 +505,14 @@ function resumeGame() {
     }
 }
 
-// Game loop
+// Game loop with performance monitoring
 function gameLoop(timestamp) {
-    const deltaTime = timestamp - lastTime;
+    // Calculate delta time and throttle frame rate if needed
+    const deltaTime = Math.min(timestamp - lastTime, settings.frameTimeLimit);
     lastTime = timestamp;
+    
+    // Performance monitoring - start time measurement
+    const startTime = performance.now();
     
     // Update animation time
     animationTime += deltaTime;
@@ -461,10 +535,69 @@ function gameLoop(timestamp) {
     // Draw game objects
     drawGame();
     
+    // Performance monitoring - end time measurement
+    const endTime = performance.now();
+    const frameTime = endTime - startTime;
+    
+    // Update performance metrics
+    updatePerformanceMetrics(frameTime, timestamp);
+    
+    // Throttle frame rate if running too fast
+    const timeToNextFrame = Math.max(0, settings.frameTimeLimit - frameTime);
+    
     // Continue the loop if game is active
     if (gameActive && !gamePaused) {
-        animationFrameId = requestAnimationFrame(gameLoop);
+        animationFrameId = setTimeout(() => {
+            requestAnimationFrame(gameLoop);
+        }, timeToNextFrame);
     }
+}
+
+// Update performance metrics
+function updatePerformanceMetrics(frameTime, timestamp) {
+    // Store last 60 frame times for FPS calculation
+    performanceMetrics.frameTimes.push(frameTime);
+    if (performanceMetrics.frameTimes.length > 60) {
+        performanceMetrics.frameTimes.shift();
+    }
+    
+    // Update FPS every 500ms
+    if (timestamp - performanceMetrics.lastFpsUpdate > 500) {
+        const averageFrameTime = performanceMetrics.frameTimes.reduce((sum, time) => sum + time, 0) / 
+                                performanceMetrics.frameTimes.length;
+        performanceMetrics.fps = Math.round(1000 / averageFrameTime);
+        performanceMetrics.lastFpsUpdate = timestamp;
+        
+        // Update object counts
+        performanceMetrics.objectCounts.obstacles = obstacles.length;
+        performanceMetrics.objectCounts.collectibles = collectibles.length;
+        performanceMetrics.objectCounts.particles = particles.length + particlePool.filter(p => p.active).length;
+        performanceMetrics.objectCounts.powerUps = powerUps.length;
+    }
+    
+    // Draw performance monitor if enabled
+    if (performanceMetrics.showMonitor) {
+        drawPerformanceMonitor();
+    }
+}
+
+// Draw performance monitor
+function drawPerformanceMonitor() {
+    // Draw background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(10, 10, 200, 110);
+    ctx.strokeStyle = '#4cc9f0';
+    ctx.strokeRect(10, 10, 200, 110);
+    
+    // Draw performance metrics
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`FPS: ${performanceMetrics.fps}`, 20, 30);
+    ctx.fillText(`Obstacles: ${performanceMetrics.objectCounts.obstacles}`, 20, 50);
+    ctx.fillText(`Collectibles: ${performanceMetrics.objectCounts.collectibles}`, 20, 70);
+    ctx.fillText(`Particles: ${performanceMetrics.objectCounts.particles}`, 20, 90);
+    ctx.fillText(`Power-ups: ${performanceMetrics.objectCounts.powerUps}`, 20, 110);
 }
 
 // Update game state
@@ -523,9 +656,9 @@ function updateGame(deltaTime) {
     updateScore();
     
     // Increase difficulty over time
-    if (animationTime - settings.lastDifficultyIncrease > settings.difficultyIncreaseInterval) {
+    if (animationTime - settings.lastDifficultyIncrease > settings.difficultyIncrementInterval) {
         // Count how many times difficulty has increased
-        const difficultyLevel = Math.floor((animationTime - settings.lastDifficultyIncrease) / settings.difficultyIncreaseInterval);
+        const difficultyLevel = Math.floor((animationTime - settings.lastDifficultyIncrease) / settings.difficultyIncrementInterval);
         
         if (difficultyLevel <= settings.maxDifficultyLevel) {
             // Apply difficulty increase with gradual diminishing returns
@@ -606,48 +739,84 @@ function generateCollectible() {
 
 // Update obstacles
 function updateObstacles(deltaTime) {
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-        obstacles[i].y += settings.gameSpeed * deltaTime * 0.1;
+    // Limit the number of obstacles processed
+    const visibleCount = Math.min(obstacles.length, settings.maxObstacles);
+    
+    for (let i = 0; i < visibleCount; i++) {
+        const obstacle = obstacles[i];
+        
+        // Move obstacle down
+        obstacle.y += settings.gameSpeed * deltaTime * 0.3;
         
         // Remove obstacles that are off-screen
-        if (obstacles[i].y > canvas.height) {
+        if (obstacle.y > canvas.height) {
+            // Use array splice for better performance when removing single items
             obstacles.splice(i, 1);
+            i--;  // Adjust counter since we removed an item
         }
+    }
+    
+    // If we have too many offscreen obstacles, trim the array
+    if (obstacles.length > settings.maxObstacles * 1.5) {
+        obstacles = obstacles.slice(-settings.maxObstacles);
     }
 }
 
 // Update collectibles
 function updateCollectibles(deltaTime) {
-    for (let i = collectibles.length - 1; i >= 0; i--) {
-        collectibles[i].y += settings.gameSpeed * deltaTime * 0.1;
+    // Limit the number of collectibles processed
+    const visibleCount = Math.min(collectibles.length, settings.maxCollectibles);
+    
+    for (let i = 0; i < visibleCount; i++) {
+        const collectible = collectibles[i];
         
-        // Rotate collectibles for visual interest
-        collectibles[i].rotation += collectibles[i].rotationSpeed;
+        // Move collectible down
+        collectible.y += settings.gameSpeed * deltaTime * 0.2;
+        
+        // Animate floating effect
+        collectible.floatOffset = Math.sin(animationTime * 0.003 + collectible.floatPhase) * 5;
         
         // Remove collectibles that are off-screen
-        if (collectibles[i].y > canvas.height) {
+        if (collectible.y > canvas.height) {
             collectibles.splice(i, 1);
+            i--;  // Adjust counter since we removed an item
         }
+    }
+    
+    // If we have too many offscreen collectibles, trim the array
+    if (collectibles.length > settings.maxCollectibles * 1.5) {
+        collectibles = collectibles.slice(-settings.maxCollectibles);
     }
 }
 
-// Update particles
+// Update particles with optimized rendering
 function updateParticles(deltaTime) {
-    for (let i = particles.length - 1; i >= 0; i--) {
+    // Limit the number of particles processed
+    const visibleCount = Math.min(particles.length, settings.maxParticles);
+    
+    for (let i = 0; i < visibleCount; i++) {
         const particle = particles[i];
         
-        // Update position
-        particle.x += particle.speedX;
-        particle.y += particle.speedY;
+        // Update particle position
+        particle.x += particle.velocityX * deltaTime * 0.05;
+        particle.y += particle.velocityY * deltaTime * 0.05;
         
-        // Update life and opacity
-        particle.life -= 1;
-        particle.opacity = particle.life / 50;
+        // Update opacity (fade out)
+        particle.opacity -= deltaTime * 0.001;
         
-        // Remove dead particles
-        if (particle.life <= 0) {
+        // Decrement life
+        particle.life -= deltaTime;
+        
+        // Remove particles that are faded out or expired
+        if (particle.opacity <= 0 || particle.life <= 0) {
             particles.splice(i, 1);
+            i--;  // Adjust counter since we removed an item
         }
+    }
+    
+    // If we have too many particles, remove oldest ones
+    if (particles.length > settings.maxParticles) {
+        particles = particles.slice(-settings.maxParticles);
     }
 }
 
@@ -664,87 +833,61 @@ function updateScorePopups(deltaTime) {
     }
 }
 
-// Check collisions
+// Check for collisions with optimized calculations
 function checkCollisions() {
-    // Check for collisions with obstacles
-    for (let i = 0; i < obstacles.length; i++) {
+    // Skip collision detection if player is in jump animation
+    if (player.jumping) {
+        return;
+    }
+    
+    // Get player bounds once for all collision checks
+    const playerLeft = player.x;
+    const playerRight = player.x + player.width;
+    const playerTop = player.y;
+    const playerBottom = player.y + player.height;
+    
+    // Check for collisions with obstacles (only check visible ones)
+    const visibleObstacles = Math.min(obstacles.length, settings.maxObstacles);
+    for (let i = 0; i < visibleObstacles; i++) {
         const obstacle = obstacles[i];
         
-        // Check if player has shield power-up
-        if (activePowerUps.shield) {
-            // Destroy the obstacle
-            obstacles.splice(i, 1);
-            
-            // Create particle effect
-            createCollectionParticles(obstacle.x, obstacle.y, '#4cc9f0');
-            
-            // Play shield hit sound
-            if (typeof soundManager !== 'undefined') {
-                soundManager.play('collect');
-            }
-            
-            // Add points
-            score += 50;
-            updateScore();
-            
-            // Create score popup
-            scorePopups.push({
-                x: obstacle.x,
-                y: obstacle.y,
-                value: 50,
-                opacity: 1,
-                velocityY: -2,
-                combo: null
-            });
-            
-            return;
+        // Skip objects that are clearly not in collision range
+        if (obstacle.y > canvas.height || obstacle.y + obstacle.height < 0) {
+            continue;
         }
         
         // Simple collision detection
         if (
-            player.x < obstacle.x + obstacle.width &&
-            player.x + player.width > obstacle.x &&
-            player.y < obstacle.y + obstacle.height &&
-            player.y + player.height > obstacle.y
+            playerLeft < obstacle.x + obstacle.width &&
+            playerRight > obstacle.x &&
+            playerTop < obstacle.y + obstacle.height &&
+            playerBottom > obstacle.y
         ) {
-            // Play crash sound
-            if (typeof soundManager !== 'undefined') {
-                soundManager.play('crash');
-            }
-            
-            // End the game
+            // Collision detected
             gameOver();
-            return;
+            return;  // Exit early since game is over
         }
     }
     
-    // Check for collisions with collectibles
-    for (let i = collectibles.length - 1; i >= 0; i--) {
+    // Check for collisions with collectibles (only check visible ones)
+    const visibleCollectibles = Math.min(collectibles.length, settings.maxCollectibles);
+    for (let i = 0; i < visibleCollectibles; i++) {
         const collectible = collectibles[i];
         
-        // Calculate distance for magnet power-up
-        if (activePowerUps.magnet) {
-            const dx = player.x - collectible.x;
-            const dy = player.y - collectible.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < powerUpTypes.magnet.attractRadius) {
-                // Move collectible toward player
-                const attractSpeed = 5;
-                const angle = Math.atan2(dy, dx);
-                collectible.x += Math.cos(angle) * attractSpeed;
-                collectible.y += Math.sin(angle) * attractSpeed;
-            }
+        // Skip objects that are clearly not in collision range
+        if (collectible.y > canvas.height || collectible.y + collectible.height < 0) {
+            continue;
         }
         
-        // Simple collision detection
+        // Simple collision detection with float offset
         if (
-            player.x < collectible.x + collectible.width &&
-            player.x + player.width > collectible.x &&
-            player.y < collectible.y + collectible.height &&
-            player.y + player.height > collectible.y
+            playerLeft < collectible.x + collectible.width &&
+            playerRight > collectible.x &&
+            playerTop < collectible.y + collectible.height + collectible.floatOffset &&
+            playerBottom > collectible.y + collectible.floatOffset
         ) {
             collectWaste(i);
+            return;  // Exit early to prevent multiple collections in a single frame
         }
     }
     
@@ -752,14 +895,20 @@ function checkCollisions() {
     for (let i = powerUps.length - 1; i >= 0; i--) {
         const powerUp = powerUps[i];
         
+        // Skip objects that are clearly not in collision range
+        if (powerUp.y > canvas.height || powerUp.y + powerUp.height < 0) {
+            continue;
+        }
+        
         // Simple collision detection
         if (
-            player.x < powerUp.x + powerUp.width &&
-            player.x + player.width > powerUp.x &&
-            player.y < powerUp.y + powerUp.height &&
-            player.y + player.height > powerUp.y
+            playerLeft < powerUp.x + powerUp.width &&
+            playerRight > powerUp.x &&
+            playerTop < powerUp.y + powerUp.height &&
+            playerBottom > powerUp.y
         ) {
             collectPowerUp(i);
+            return;  // Exit early to prevent multiple collections in a single frame
         }
     }
 }
@@ -796,6 +945,11 @@ function drawGame() {
     // Draw combo indicator if active
     if (comboCount > 0 && comboMultiplier > 1) {
         drawComboIndicator();
+    }
+    
+    // Draw performance monitor if enabled
+    if (performanceMetrics.showMonitor) {
+        drawPerformanceMonitor();
     }
 }
 
@@ -1098,19 +1252,6 @@ function drawPowerUps() {
         ctx.fillStyle = typeConfig.color;
         ctx.beginPath();
         ctx.arc(powerUp.x, powerUp.y, powerUp.width * 0.7 * (1 + powerUp.pulseSize), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-}
-
-// Draw particles
-function drawParticles() {
-    for (const particle of particles) {
-        ctx.save();
-        ctx.globalAlpha = particle.opacity;
-        ctx.fillStyle = particle.color;
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
@@ -1470,21 +1611,26 @@ function createDifficultyPopup(level) {
     }
 }
 
-// Create particles for waste collection
+// Create collection particles with object pooling
 function createCollectionParticles(x, y, color) {
     const particleCount = 15;
     
     for (let i = 0; i < particleCount; i++) {
-        particles.push({
-            x: x,
-            y: y,
-            size: Math.random() * 5 + 2,
-            speedX: (Math.random() - 0.5) * 5,
-            speedY: (Math.random() - 0.5) * 5,
-            color: color,
-            opacity: 1,
-            life: Math.random() * 30 + 20
-        });
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 2 + 1;
+        
+        // Get a particle from the pool instead of creating a new object
+        const particle = getParticleFromPool();
+        
+        // Set particle properties
+        particle.x = x;
+        particle.y = y;
+        particle.velocityX = Math.cos(angle) * speed;
+        particle.velocityY = Math.sin(angle) * speed;
+        particle.size = Math.random() * 3 + 2;
+        particle.color = color;
+        particle.opacity = 1;
+        particle.life = Math.random() * 30 + 20;
     }
 }
 
@@ -1599,6 +1745,39 @@ function updateActivePowerUps(deltaTime, currentTime) {
     if (activePowerUps.speedBoost) {
         // Speed boost effect is applied directly in the player movement
     }
+}
+
+// Draw particles with optimized rendering
+function drawParticles() {
+    // Batch similar particles for better performance
+    ctx.globalAlpha = 1;
+    
+    // Group particles by color for batch rendering
+    const particlesByColor = {};
+    
+    // Only process active particles
+    for (const particle of particles.concat(particlePool.filter(p => p.active))) {
+        if (!particlesByColor[particle.color]) {
+            particlesByColor[particle.color] = [];
+        }
+        particlesByColor[particle.color].push(particle);
+    }
+    
+    // Draw particles in batches by color
+    for (const color in particlesByColor) {
+        const particleBatch = particlesByColor[color];
+        ctx.fillStyle = color;
+        
+        for (const particle of particleBatch) {
+            ctx.globalAlpha = particle.opacity;
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    // Reset global alpha
+    ctx.globalAlpha = 1;
 }
 
 // Draw active power-up indicators
