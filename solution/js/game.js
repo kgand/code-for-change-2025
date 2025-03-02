@@ -1013,7 +1013,7 @@ function movePlayer(direction) {
         
         // Play sound effect if available
         if (typeof soundManager !== 'undefined') {
-            soundManager.playSound('move');
+            soundManager.play('move');
         }
     }
 } 
