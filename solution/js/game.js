@@ -187,107 +187,98 @@ function setDifficulty(difficulty) {
 
 // Initialize the game
 function init() {
-    // Detect device capabilities
-    detectDeviceCapabilities();
+    // Set up canvas dimensions
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     
-    // Create quality settings UI for mobile
-    if (settings.isMobileDevice) {
-        createMobileQualitySettings();
-    }
-    
-    // Set canvas dimensions
-    canvas.width = gamePlayScreen.offsetWidth;
-    canvas.height = gamePlayScreen.offsetHeight;
-    
-    // Calculate lane width
+    // Calculate lane width based on canvas width
     settings.laneWidth = canvas.width / settings.lanes;
     
     // Initialize player
-    player = {
-        x: (Math.floor(settings.lanes / 2) * settings.laneWidth) - (playerWidth / 2),
-        y: canvas.height - playerHeight - 20,
-        width: playerWidth,
-        height: playerHeight,
-        lane: Math.floor(settings.lanes / 2),
-        jumping: false,
-        jumpHeight: 0,
-        jumpProgress: 0,
-        fallSpeed: 0,
-        sprite: {
-            frameX: 0,
-            frameY: 0,
-            maxFrame: 3,
-            animationSpeed: 5,
-            frameTimer: 0
-        }
-    };
+    initPlayer();
     
-    // Reset game state
-    obstacles = [];
-    collectibles = [];
-    particles = [];
-    scorePopups = [];
-    powerUps = [];
-    activePowerUps = {};
-    score = 0;
-    wasteCollected = 0;
-    gameActive = true;
-    gamePaused = false;
-    lastObstacleTime = 0;
-    lastCollectibleTime = 0;
-    lastPowerUpTime = 0;
-    lastTime = 0;
-    animationTime = 0;
-    comboCount = 0;
-    comboTimer = 0;
-    comboMultiplier = 1;
-    comboDisplayTime = 0;
+    // Initialize animation manager
+    animationManager = new AnimationManager(canvas, ctx, settings);
     
-    // Reset performance metrics
-    performanceMetrics.frameTimes = [];
-    performanceMetrics.fps = 0;
-    performanceMetrics.lastFpsUpdate = 0;
-    
-    // Reset difficulty settings
-    settings.lastDifficultyIncrease = 0;
-    
-    // Initialize settings based on selected difficulty
-    setDifficulty(selectedDifficulty);
+    // Initialize object pools
+    initializeObjectPools();
     
     // Initialize background layers
     initBackgroundLayers();
     
-    // Update UI
-    updateScore();
-    updateWasteCollected();
+    // Initialize environmental facts
+    displayEnvironmentalFacts();
     
-    // Create object pools for better performance
-    initializeObjectPools();
-    
-    // Reset and initialize sound manager if available
-    if (typeof soundManager !== 'undefined') {
-        soundManager.resetAll();
+    // Initialize touch controls if on mobile
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        settings.isMobileDevice = true;
+        touchControls = new TouchControls(canvas, {
+            onSwipeLeft: () => movePlayer(-1),
+            onSwipeRight: () => movePlayer(1),
+            onSwipeUp: playerJump,
+            onTap: playerJump
+        });
     }
     
-    // Set initial high score
-    highScore = parseInt(localStorage.getItem('subwasteSurferHighScore')) || 0;
-    
-    // Announce game start for screen readers
-    if (typeof accessibilityManager !== 'undefined') {
-        accessibilityManager.announceGameEvent('gameStart');
-    }
-    
-    // Set up keyboard event for performance monitor toggle
-    document.addEventListener('keydown', (event) => {
-        // Toggle performance monitor with F key
-        if (event.key === 'F' && event.ctrlKey) {
-            performanceMetrics.showMonitor = !performanceMetrics.showMonitor;
-            event.preventDefault();
+    // Initialize waste sorting game
+    wasteSortingGame = new WasteSortingGame(canvas, ctx, {
+        onComplete: (score, correctSorts) => {
+            // Apply bonus based on sorting performance
+            const bonus = score * 10;
+            this.score += bonus;
+            
+            // Resume main game
+            inMiniGame = false;
+            resumeGame();
+            
+            // Show bonus notification
+            scorePopups.push({
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                value: `Bonus: +${bonus}`,
+                opacity: 1,
+                velocityY: -1,
+                color: '#ffde59'
+            });
         }
     });
     
-    // Initialize the animation manager
-    animationManager = new AnimationManager(canvas, ctx, settings);
+    // Detect device capabilities and adjust settings
+    detectDeviceCapabilities();
+    
+    // Set up event listeners
+    window.addEventListener('keydown', (e) => {
+        if (!gameActive || inMiniGame) return;
+        
+        switch (e.key) {
+            case 'ArrowLeft':
+                movePlayer(-1);
+                break;
+            case 'ArrowRight':
+                movePlayer(1);
+                break;
+            case 'ArrowUp':
+            case ' ':
+                playerJump();
+                break;
+            case 'p':
+            case 'Escape':
+                if (gamePaused) {
+                    resumeGame();
+                } else {
+                    pauseGame();
+                }
+                break;
+            case 'm':
+                // Toggle mute
+                if (typeof soundManager !== 'undefined') {
+                    soundManager.toggleMute();
+                    muteButton.textContent = soundManager.isMuted ? '🔇' : '🔊';
+                    muteButton.setAttribute('aria-label', soundManager.isMuted ? 'Unmute' : 'Mute');
+                }
+                break;
+        }
+    });
 }
 
 // Detect device capabilities for performance optimizations
@@ -794,7 +785,7 @@ function updateGame(deltaTime) {
     updateAchievements();
 }
 
-// Update player position
+// Update player position with enhanced animations
 function updatePlayer(deltaTime) {
     // Apply gravity
     player.velocityY += settings.gravity;
@@ -804,31 +795,454 @@ function updatePlayer(deltaTime) {
     if (player.y >= canvas.height - 100) {
         player.y = canvas.height - 100;
         player.velocityY = 0;
-        player.isJumping = false;
+        
+        // Only change jumping state if player was previously jumping
+        if (player.isJumping) {
+            player.isJumping = false;
+            
+            // Play landing animation
+            if (animationManager) {
+                animationManager.createCollectionEffect(
+                    player.x, 
+                    player.y + player.height / 2, 
+                    '#cccccc'
+                );
+            }
+        }
     }
     
-    // Update player x position based on lane
+    // Update player x position based on lane with smoother transitions
     const targetX = (player.lane * settings.laneWidth) - (settings.laneWidth / 2);
+    const distanceToTarget = targetX - player.x;
     
     // Apply speed boost if active
-    let moveSpeed = 0.1;
+    let moveSpeed = settings.playerSpeed;
     if (activePowerUps.speedBoost) {
         moveSpeed *= powerUpTypes.speedBoost.speedMultiplier;
     }
     
-    player.x += (targetX - player.x) * moveSpeed * deltaTime * 0.1;
+    // Smooth movement with easing
+    player.x += distanceToTarget * moveSpeed * (deltaTime / 16);
     
-    // Update animation state
-    player.animationState = Math.floor(animationTime / 200) % 4;
+    // Update animation states based on movement and actions
+    if (Math.abs(distanceToTarget) > 5) {
+        // Player is moving horizontally
+        player.movementState = distanceToTarget > 0 ? 'moving-right' : 'moving-left';
+        
+        // Update lean angle based on movement direction and speed
+        const targetLean = distanceToTarget > 0 ? 0.1 : -0.1;
+        player.leanAngle += (targetLean - player.leanAngle) * 0.1;
+    } else {
+        // Player is relatively stationary
+        player.movementState = 'idle';
+        
+        // Gradually return to upright position
+        player.leanAngle *= 0.9;
+    }
     
-    // Animate eyes (simple up and down movement)
+    // Update jump animation state
+    if (player.isJumping) {
+        player.jumpProgress = Math.min(1, (canvas.height - 100 - player.y) / settings.jumpHeight);
+        
+        // Set jump animation phase based on progress
+        if (player.jumpProgress > 0.5) {
+            player.jumpPhase = 'ascending';
+        } else {
+            player.jumpPhase = 'descending';
+        }
+    } else {
+        player.jumpPhase = null;
+        player.jumpProgress = 0;
+    }
+    
+    // Update arm swing animation based on movement
+    if (player.movementState === 'idle') {
+        // Gentle arm swing when idle
+        player.armSwing = Math.sin(animationTime / 500) * 0.2;
+    } else {
+        // More pronounced arm swing when moving
+        player.armSwing = Math.sin(animationTime / 200) * 0.4;
+    }
+    
+    // Update eye animation
+    player.blinkTimer -= deltaTime;
+    if (player.blinkTimer <= 0) {
+        player.isBlinking = !player.isBlinking;
+        
+        // Set next blink timer
+        if (player.isBlinking) {
+            // Short blink duration
+            player.blinkTimer = 150;
+        } else {
+            // Random time until next blink
+            player.blinkTimer = Math.random() * 5000 + 2000;
+        }
+    }
+    
+    // Update eye position based on movement direction
+    if (player.movementState === 'moving-right') {
+        player.eyeOffset = Math.min(3, player.eyeOffset + 0.2);
+    } else if (player.movementState === 'moving-left') {
+        player.eyeOffset = Math.max(-3, player.eyeOffset - 0.2);
+    } else {
+        // Gradually return to center
+        player.eyeOffset *= 0.9;
+    }
+    
+    // Animate eyes (vertical movement)
     player.eyeHeight = -20 + Math.sin(animationTime / 300) * 3;
     
     // Add trail effect if player has active speed boost or invincibility
     if (activePowerUps.speedBoost || activePowerUps.invincibility) {
         const trailColor = activePowerUps.speedBoost ? '#00ffff' : '#ffff00';
-        animationManager.createTrailEffect(player.x + player.width / 2, player.y + player.height, trailColor);
+        if (animationManager) {
+            animationManager.createTrailEffect(player.x + player.width / 2, player.y + player.height, trailColor);
+        }
     }
+}
+
+// Draw player with enhanced animations
+function drawPlayer() {
+    // Check if we have preloaded player sprite
+    if (window.gameAssets && window.gameAssets.images['player-sprite']) {
+        // Draw player using sprite sheet
+        const sprite = window.gameAssets.images['player-sprite'];
+        
+        // Update animation frame
+        player.sprite.frameTimer += 1;
+        if (player.sprite.frameTimer >= player.sprite.animationSpeed) {
+            player.sprite.frameTimer = 0;
+            player.sprite.frameX = (player.sprite.frameX + 1) % player.sprite.maxFrame;
+        }
+        
+        // Determine which animation row to use based on player state
+        if (player.isJumping) {
+            player.sprite.frameY = 1; // Jump animation row
+        } else if (player.movementState !== 'idle') {
+            player.sprite.frameY = 2; // Movement animation row
+        } else {
+            player.sprite.frameY = 0; // Idle animation row
+        }
+        
+        // Draw sprite with animation
+        const frameWidth = sprite.width / player.sprite.maxFrame;
+        const frameHeight = sprite.height / player.sprite.rows;
+        
+        // Add visual effect for active power-ups
+        if (activePowerUps.shield) {
+            // Draw shield effect
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.width * 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = powerUpTypes.shield.color;
+            ctx.globalAlpha = 0.3 + Math.sin(animationTime / 200) * 0.1; // Pulsing effect
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        if (activePowerUps.speedBoost) {
+            // Draw speed lines behind player
+            ctx.save();
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(player.x - player.width / 2 - 10 - i * 3, player.y - player.height / 2);
+                ctx.lineTo(player.x - player.width / 2 - 20 - i * 5, player.y + player.height / 2);
+                ctx.strokeStyle = powerUpTypes.speedBoost.color;
+                ctx.globalAlpha = 0.5 - i * 0.1;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+        
+        // Apply rotation for leaning effect
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.leanAngle);
+        
+        // Draw sprite
+        ctx.drawImage(
+            sprite,
+            player.sprite.frameX * frameWidth,
+            player.sprite.frameY * frameHeight,
+            frameWidth,
+            frameHeight,
+            -player.width / 2,
+            -player.height / 2,
+            player.width,
+            player.height
+        );
+        
+        ctx.restore();
+    } else {
+        // Fallback to enhanced rectangle drawing if sprite not available
+        // Apply rotation for leaning effect
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.leanAngle);
+        
+        // Add visual effect for active power-ups
+        if (activePowerUps.shield) {
+            // Draw shield effect
+            ctx.beginPath();
+            ctx.arc(0, 0, player.width * 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = powerUpTypes.shield.color;
+            ctx.globalAlpha = 0.3 + Math.sin(animationTime / 200) * 0.1; // Pulsing effect
+            ctx.fill();
+        }
+        
+        if (activePowerUps.speedBoost) {
+            // Draw speed lines behind player
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(-player.width / 2 - 10 - i * 3, -player.height / 2);
+                ctx.lineTo(-player.width / 2 - 20 - i * 5, player.height / 2);
+                ctx.strokeStyle = powerUpTypes.speedBoost.color;
+                ctx.globalAlpha = 0.5 - i * 0.1;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+        
+        // Draw Wall-E body
+        ctx.fillStyle = '#f9c74f'; // Yellow-orange for Wall-E
+        ctx.globalAlpha = 1;
+        ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+        
+        // Draw treads/wheels with animation
+        ctx.fillStyle = '#4d4d4d';
+        
+        // Left tread with animation
+        const treadOffset = Math.sin(animationTime / 100) * 3;
+        ctx.fillRect(-player.width / 2 - 5, 15 + treadOffset, 10, 20);
+        
+        // Right tread with animation (slightly out of phase)
+        const rightTreadOffset = Math.sin(animationTime / 100 + Math.PI) * 3;
+        ctx.fillRect(player.width / 2 - 5, 15 + rightTreadOffset, 10, 20);
+        
+        // Center tread
+        ctx.fillRect(-player.width / 2, 15, player.width, 20);
+        
+        // Draw eyes (Wall-E style with animation)
+        ctx.fillStyle = '#ffffff';
+        
+        // Left eye
+        ctx.beginPath();
+        ctx.arc(-10, player.eyeHeight, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Right eye
+        ctx.beginPath();
+        ctx.arc(10, player.eyeHeight, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye pupils with blinking and direction animation
+        if (!player.isBlinking) {
+            ctx.fillStyle = '#000000';
+            
+            // Left pupil with direction offset
+            ctx.beginPath();
+            ctx.arc(-10 + player.eyeOffset, player.eyeHeight, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Right pupil with direction offset
+            ctx.beginPath();
+            ctx.arc(10 + player.eyeOffset, player.eyeHeight, 4, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Draw closed eyes when blinking
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            
+            // Left eye closed
+            ctx.beginPath();
+            ctx.moveTo(-15, player.eyeHeight);
+            ctx.lineTo(-5, player.eyeHeight);
+            ctx.stroke();
+            
+            // Right eye closed
+            ctx.beginPath();
+            ctx.moveTo(5, player.eyeHeight);
+            ctx.lineTo(15, player.eyeHeight);
+            ctx.stroke();
+        }
+        
+        // Draw arms with animation based on state
+        ctx.fillStyle = '#f9c74f';
+        
+        // Left arm with animation
+        ctx.save();
+        
+        if (player.isJumping) {
+            // Arms up when jumping
+            ctx.translate(-player.width / 2 - 10, -10);
+            ctx.rotate(-0.5 - player.jumpProgress * 0.3);
+        } else {
+            // Normal arm swing animation
+            ctx.translate(-player.width / 2 - 10, -10);
+            ctx.rotate(player.armSwing);
+        }
+        
+        ctx.fillRect(0, 0, 10, 30);
+        ctx.restore();
+        
+        // Right arm with animation (slightly out of phase)
+        ctx.save();
+        
+        if (player.isJumping) {
+            // Arms up when jumping
+            ctx.translate(player.width / 2, -10);
+            ctx.rotate(0.5 + player.jumpProgress * 0.3);
+        } else {
+            // Normal arm swing animation (opposite to left arm)
+            ctx.translate(player.width / 2, -10);
+            ctx.rotate(-player.armSwing);
+        }
+        
+        ctx.fillRect(0, 0, 10, 30);
+        ctx.restore();
+        
+        // Draw expression based on state
+        if (player.isJumping) {
+            // Excited expression when jumping
+            ctx.fillStyle = '#f9c74f';
+            ctx.beginPath();
+            ctx.arc(0, 10, 8, 0, Math.PI, false);
+            ctx.fill();
+        } else if (activePowerUps.speedBoost || activePowerUps.invincibility) {
+            // Determined expression with power-ups
+            ctx.fillStyle = '#f9c74f';
+            ctx.beginPath();
+            ctx.arc(0, 15, 5, 0, Math.PI, true);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+}
+
+// Initialize player with animation properties
+function initPlayer() {
+    player = {
+        x: (Math.floor(settings.lanes / 2) * settings.laneWidth) - (playerWidth / 2),
+        y: canvas.height - playerHeight - 20,
+        width: playerWidth,
+        height: playerHeight,
+        lane: Math.floor(settings.lanes / 2),
+        targetLane: Math.floor(settings.lanes / 2),
+        jumping: false,
+        jumpHeight: 0,
+        jumpProgress: 0,
+        fallSpeed: 0,
+        onGround: true,
+        // Animation properties
+        sprite: {
+            frameX: 0,
+            frameY: 0,
+            maxFrame: 3,
+            animationSpeed: 5,
+            frameTimer: 0
+        },
+        // Advanced animation states
+        animation: {
+            state: 'idle', // idle, running, jumping, landing
+            frameCounter: 0,
+            frameDuration: 8, // frames to wait before changing animation frame
+            currentFrame: 0,
+            direction: 1, // 1 for right, -1 for left
+            // Arm animation
+            armSwing: 0,
+            armSwingDirection: 1,
+            armSwingSpeed: 0.05,
+            // Eye animation
+            eyeState: 'normal', // normal, blinking, looking
+            eyeTimer: 0,
+            blinkDuration: 10,
+            lookDirection: { x: 0, y: 0 },
+            // Expression
+            expression: 'neutral', // neutral, happy, surprised, determined
+            expressionTimer: 0,
+            expressionDuration: 120
+        },
+        // Visual effects
+        effects: {
+            shield: {
+                active: false,
+                opacity: 0,
+                radius: playerWidth * 1.2,
+                color: 'rgba(64, 156, 255, 0.4)'
+            },
+            speedBoost: {
+                active: false,
+                particles: [],
+                color: 'rgba(255, 215, 0, 0.7)'
+            },
+            magnetEffect: {
+                active: false,
+                radius: playerWidth * 3,
+                opacity: 0.3,
+                color: 'rgba(138, 43, 226, 0.3)'
+            }
+        }
+    };
+    
+    // Reset game state
+    obstacles = [];
+    collectibles = [];
+    particles = [];
+    scorePopups = [];
+    powerUps = [];
+    activePowerUps = {};
+    score = 0;
+    wasteCollected = 0;
+    gameActive = true;
+    gamePaused = false;
+    lastObstacleTime = 0;
+    lastCollectibleTime = 0;
+    lastPowerUpTime = 0;
+    lastTime = 0;
+    animationTime = 0;
+    comboCount = 0;
+    comboTimer = 0;
+    comboMultiplier = 1;
+    comboDisplayTime = 0;
+    
+    // Reset performance metrics
+    performanceMetrics.frameTimes = [];
+    performanceMetrics.fps = 0;
+    performanceMetrics.lastFpsUpdate = 0;
+    
+    // Reset difficulty settings
+    settings.lastDifficultyIncrease = 0;
+    
+    // Initialize settings based on selected difficulty
+    setDifficulty(selectedDifficulty);
+    
+    // Update UI
+    updateScore();
+    updateWasteCollected();
+    
+    // Reset and initialize sound manager if available
+    if (typeof soundManager !== 'undefined') {
+        soundManager.resetAll();
+    }
+    
+    // Set initial high score
+    highScore = parseInt(localStorage.getItem('subwasteSurferHighScore')) || 0;
+    
+    // Announce game start for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('gameStart');
+    }
+    
+    // Set up keyboard event for performance monitor toggle
+    document.addEventListener('keydown', (event) => {
+        // Toggle performance monitor with F key
+        if (event.key === 'F' && event.ctrlKey) {
+            performanceMetrics.showMonitor = !performanceMetrics.showMonitor;
+            event.preventDefault();
+        }
+    });
 }
 
 // Generate obstacle (renamed from generateObstacles)
@@ -1262,273 +1676,6 @@ function drawLanes() {
     }
 }
 
-// Draw player
-function drawPlayer() {
-    // Check if we have preloaded player sprite
-    if (window.gameAssets && window.gameAssets.images['player-sprite']) {
-        // Draw player using sprite sheet
-        const sprite = window.gameAssets.images['player-sprite'];
-        
-        // Update animation frame
-        player.sprite.frameTimer++;
-        if (player.sprite.frameTimer >= player.sprite.animationSpeed) {
-            player.sprite.frameTimer = 0;
-            player.sprite.frameX = (player.sprite.frameX + 1) % player.sprite.maxFrame;
-        }
-        
-        // Draw sprite with animation
-        const frameWidth = sprite.width / player.sprite.maxFrame;
-        const frameHeight = sprite.height;
-        
-        // Add visual effect for active power-ups
-        if (activePowerUps.shield) {
-            // Draw shield effect
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.width * 0.8, 0, Math.PI * 2);
-            ctx.fillStyle = powerUpTypes.shield.color;
-            ctx.globalAlpha = 0.3;
-            ctx.fill();
-            ctx.restore();
-        }
-        
-        if (activePowerUps.speedBoost) {
-            // Draw speed lines behind player
-            ctx.save();
-            for (let i = 0; i < 5; i++) {
-                ctx.beginPath();
-                ctx.moveTo(player.x - player.width / 2 - 10 - i * 3, player.y - player.height / 2);
-                ctx.lineTo(player.x - player.width / 2 - 20 - i * 5, player.y + player.height / 2);
-                ctx.strokeStyle = powerUpTypes.speedBoost.color;
-                ctx.globalAlpha = 0.5 - i * 0.1;
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-        
-        // Draw sprite
-        ctx.drawImage(
-            sprite,
-            player.sprite.frameX * frameWidth,
-            player.sprite.frameY * frameHeight,
-            frameWidth,
-            frameHeight,
-            player.x - player.width / 2,
-            player.y - player.height / 2,
-            player.width,
-            player.height
-        );
-    } else {
-        // Fallback to basic rectangle drawing if sprite not available
-        // Draw Wall-E body
-        ctx.fillStyle = '#f9c74f'; // Yellow-orange for Wall-E
-        
-        // Add visual effect for active power-ups
-        if (activePowerUps.shield) {
-            // Draw shield effect
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.width * 0.8, 0, Math.PI * 2);
-            ctx.fillStyle = powerUpTypes.shield.color;
-            ctx.globalAlpha = 0.3;
-            ctx.fill();
-            ctx.restore();
-        }
-        
-        if (activePowerUps.speedBoost) {
-            // Draw speed lines behind player
-            ctx.save();
-            for (let i = 0; i < 5; i++) {
-                ctx.beginPath();
-                ctx.moveTo(player.x - player.width / 2 - 10 - i * 3, player.y - player.height / 2);
-                ctx.lineTo(player.x - player.width / 2 - 20 - i * 5, player.y + player.height / 2);
-                ctx.strokeStyle = powerUpTypes.speedBoost.color;
-                ctx.globalAlpha = 0.5 - i * 0.1;
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-        
-        ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
-        
-        // Draw treads/wheels
-        ctx.fillStyle = '#4d4d4d';
-        ctx.fillRect(player.x - player.width / 2 - 5, player.y + 15, player.width + 10, 20);
-        
-        // Draw eyes (simple Wall-E style with animation)
-        ctx.fillStyle = '#ffffff';
-        
-        // Left eye
-        ctx.beginPath();
-        ctx.arc(player.x - 10, player.y + player.eyeHeight, 8, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Right eye
-        ctx.beginPath();
-        ctx.arc(player.x + 10, player.y + player.eyeHeight, 8, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Eye pupils
-        ctx.fillStyle = '#000000';
-        
-        // Animate pupils based on animation state
-        let pupilOffsetX = 0;
-        if (player.animationState === 1) pupilOffsetX = 2;
-        else if (player.animationState === 3) pupilOffsetX = -2;
-        
-        // Left pupil
-        ctx.beginPath();
-        ctx.arc(player.x - 10 + pupilOffsetX, player.y + player.eyeHeight, 4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Right pupil
-        ctx.beginPath();
-        ctx.arc(player.x + 10 + pupilOffsetX, player.y + player.eyeHeight, 4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Draw arms if not jumping
-        if (!player.isJumping) {
-            // Left arm with animation
-            ctx.fillStyle = '#f9c74f';
-            ctx.save();
-            ctx.translate(player.x - player.width / 2 - 10, player.y - 10);
-            ctx.rotate(Math.sin(animationTime / 200) * 0.2);
-            ctx.fillRect(0, 0, 10, 30);
-            ctx.restore();
-            
-            // Right arm with animation
-            ctx.save();
-            ctx.translate(player.x + player.width / 2, player.y - 10);
-            ctx.rotate(-Math.sin(animationTime / 200) * 0.2);
-            ctx.fillRect(0, 0, 10, 30);
-            ctx.restore();
-        } else {
-            // Arms up when jumping
-            ctx.fillStyle = '#f9c74f';
-            ctx.save();
-            ctx.translate(player.x - player.width / 2 - 10, player.y - 10);
-            ctx.rotate(-Math.PI / 4);
-            ctx.fillRect(0, 0, 10, 30);
-            ctx.restore();
-            
-            ctx.save();
-            ctx.translate(player.x + player.width / 2, player.y - 10);
-            ctx.rotate(Math.PI / 4);
-            ctx.fillRect(0, 0, 10, 30);
-            ctx.restore();
-        }
-    }
-}
-
-// Draw obstacles
-function drawObstacles() {
-    for (const obstacle of obstacles) {
-        // Different colors for different obstacle types
-        switch (obstacle.type) {
-            case 0: // Trash pile
-                ctx.fillStyle = '#6a994e';
-                ctx.fillRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height);
-                
-                // Add some detail
-                ctx.fillStyle = '#386641';
-                ctx.fillRect(obstacle.x - obstacle.width / 4, obstacle.y - obstacle.height / 4, obstacle.width / 2, obstacle.height / 2);
-                break;
-                
-            case 1: // Broken electronics
-                ctx.fillStyle = '#bc4749';
-                ctx.fillRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height);
-                
-                // Add some detail
-                ctx.fillStyle = '#a7c957';
-                ctx.fillRect(obstacle.x - obstacle.width / 3, obstacle.y - obstacle.height / 3, obstacle.width / 6, obstacle.height / 6);
-                ctx.fillRect(obstacle.x + obstacle.width / 6, obstacle.y + obstacle.height / 6, obstacle.width / 6, obstacle.height / 6);
-                break;
-                
-            case 2: // Oil spill
-                ctx.fillStyle = '#2b2d42';
-                ctx.beginPath();
-                ctx.ellipse(obstacle.x, obstacle.y, obstacle.width / 2, obstacle.height / 4, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Add some detail
-                ctx.fillStyle = '#5c677d';
-                ctx.beginPath();
-                ctx.ellipse(obstacle.x, obstacle.y, obstacle.width / 3, obstacle.height / 6, 0, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-        }
-    }
-}
-
-// Draw collectibles
-function drawCollectibles() {
-    for (const collectible of collectibles) {
-        ctx.save();
-        ctx.translate(collectible.x, collectible.y);
-        ctx.rotate(collectible.rotation);
-        
-        // Different colors and shapes for different waste types
-        switch (collectible.type) {
-            case 0: // Plastic
-                ctx.fillStyle = '#90e0ef';
-                ctx.beginPath();
-                ctx.moveTo(0, -collectible.height / 2);
-                ctx.lineTo(collectible.width / 2, collectible.height / 2);
-                ctx.lineTo(-collectible.width / 2, collectible.height / 2);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Add recycling symbol
-                ctx.strokeStyle = '#0077b6';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(0, 0, collectible.width / 4, 0, Math.PI * 2);
-                ctx.stroke();
-                break;
-                
-            case 1: // Paper
-                ctx.fillStyle = '#ffb703';
-                ctx.fillRect(-collectible.width / 2, -collectible.height / 2, collectible.width, collectible.height);
-                
-                // Add lines to represent text
-                ctx.strokeStyle = '#fb8500';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(-collectible.width / 3, -collectible.height / 4);
-                ctx.lineTo(collectible.width / 3, -collectible.height / 4);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(-collectible.width / 3, 0);
-                ctx.lineTo(collectible.width / 3, 0);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(-collectible.width / 3, collectible.height / 4);
-                ctx.lineTo(collectible.width / 3, collectible.height / 4);
-                ctx.stroke();
-                break;
-                
-            case 2: // Metal
-                ctx.fillStyle = '#adb5bd';
-                ctx.beginPath();
-                ctx.arc(0, 0, collectible.width / 2, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Add shine effect
-                ctx.fillStyle = '#dee2e6';
-                ctx.beginPath();
-                ctx.arc(-collectible.width / 6, -collectible.height / 6, collectible.width / 6, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-        }
-        
-        ctx.restore();
-    }
-}
-
 // Draw power-ups
 function drawPowerUps() {
     for (const powerUp of powerUps) {
@@ -1683,19 +1830,40 @@ function gameOver() {
 
 // Player jump function
 function playerJump() {
-    if (!player.isJumping) {
-        // Apply speed boost to jump force if active
-        let jumpForce = settings.jumpForce;
-        if (activePowerUps.speedBoost) {
-            jumpForce *= 1.2; // Jump higher with speed boost
-        }
-        
-        player.velocityY = jumpForce;
-        player.isJumping = true;
-        
-        // Play jump sound
-        if (typeof soundManager !== 'undefined') {
-            soundManager.play('jump');
+    if (!gameActive || gamePaused || player.jumping) return;
+    
+    player.jumping = true;
+    player.jumpProgress = 0;
+    player.onGround = false;
+    
+    // Update animation state
+    player.animation.state = 'jumping';
+    player.animation.expression = 'surprised';
+    player.animation.expressionTimer = player.animation.expressionDuration / 2;
+    
+    // Play sound effect if available
+    if (typeof soundManager !== 'undefined') {
+        soundManager.play('jump');
+    }
+    
+    // Announce jump for accessibility
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('jump');
+    }
+    
+    // Add jump particles
+    if (!settings.lowPerformanceMode) {
+        for (let i = 0; i < 5; i++) {
+            particles.push({
+                x: player.x + player.width / 2,
+                y: player.y + player.height,
+                size: Math.random() * 5 + 2,
+                speedX: (Math.random() - 0.5) * 3,
+                speedY: Math.random() * 2 + 1,
+                color: '#cccccc',
+                opacity: 1,
+                gravity: 0.1
+            });
         }
     }
 }
@@ -1903,14 +2071,30 @@ window.addEventListener('load', () => {
 
 // Player movement function for consistent controls
 function movePlayer(direction) {
-    if (!gameActive || gamePaused) return;
+    if (!gameActive || gamePaused || player.jumping) return;
     
-    if (player.lane + direction >= 0 && player.lane + direction < settings.lanes) {
-        player.lane += direction;
+    // Calculate new lane
+    const newLane = Math.max(0, Math.min(settings.lanes - 1, player.lane + direction));
+    
+    // Only proceed if actually changing lanes
+    if (newLane !== player.lane) {
+        player.lane = newLane;
+        player.targetLane = newLane;
+        
+        // Update animation state
+        player.animation.state = 'running';
+        player.animation.direction = direction > 0 ? 1 : -1;
+        player.animation.expression = 'determined';
+        player.animation.expressionTimer = player.animation.expressionDuration;
         
         // Play sound effect if available
         if (typeof soundManager !== 'undefined') {
             soundManager.play('move');
+        }
+        
+        // Announce lane change for accessibility
+        if (typeof accessibilityManager !== 'undefined') {
+            accessibilityManager.announceGameEvent('laneChange', { lane: newLane + 1 });
         }
     }
 }
