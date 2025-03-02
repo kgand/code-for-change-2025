@@ -417,18 +417,16 @@ function initBackgroundLayers() {
     const cloudCount = settings.isMobileDevice ? 5 : 10;
     generateClouds(cloudCount);
     
-    // Create background layers
-    // For simplicity, we'll create placeholder image objects
-    // In a real implementation, these would be actual loaded images
+    // Create background layers using preloaded images if available
+    const backgroundImageNames = ['bg-layer1', 'bg-layer2', 'bg-layer3'];
+    
     for (let i = 0; i < 3; i++) {
         const speedFactor = (i + 1) / 3;
         const layer = {
-            image: {
-                // This is a placeholder for a real image
-                // In a real implementation, you would load actual images
-                width: canvas.width,
-                height: canvas.height
-            },
+            // Use preloaded images if available, otherwise create placeholders
+            image: window.gameAssets && window.gameAssets.images[backgroundImageNames[i]] ? 
+                window.gameAssets.images[backgroundImageNames[i]] : 
+                { width: canvas.width, height: canvas.height },
             x: 0,
             scrollSpeed: 0.5 * speedFactor,
             opacity: 0.3 - (i * 0.1)
@@ -1169,103 +1167,161 @@ function drawLanes() {
 
 // Draw player
 function drawPlayer() {
-    // Draw Wall-E body
-    ctx.fillStyle = '#f9c74f'; // Yellow-orange for Wall-E
-    
-    // Add visual effect for active power-ups
-    if (activePowerUps.shield) {
-        // Draw shield effect
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, player.width * 0.8, 0, Math.PI * 2);
-        ctx.fillStyle = powerUpTypes.shield.color;
-        ctx.globalAlpha = 0.3;
-        ctx.fill();
-        ctx.restore();
-    }
-    
-    if (activePowerUps.speedBoost) {
-        // Draw speed lines behind player
-        ctx.save();
-        for (let i = 0; i < 5; i++) {
-            ctx.beginPath();
-            ctx.moveTo(player.x - player.width / 2 - 10 - i * 3, player.y - player.height / 2);
-            ctx.lineTo(player.x - player.width / 2 - 20 - i * 5, player.y + player.height / 2);
-            ctx.strokeStyle = powerUpTypes.speedBoost.color;
-            ctx.globalAlpha = 0.5 - i * 0.1;
-            ctx.lineWidth = 3;
-            ctx.stroke();
+    // Check if we have preloaded player sprite
+    if (window.gameAssets && window.gameAssets.images['player-sprite']) {
+        // Draw player using sprite sheet
+        const sprite = window.gameAssets.images['player-sprite'];
+        
+        // Update animation frame
+        player.sprite.frameTimer++;
+        if (player.sprite.frameTimer >= player.sprite.animationSpeed) {
+            player.sprite.frameTimer = 0;
+            player.sprite.frameX = (player.sprite.frameX + 1) % player.sprite.maxFrame;
         }
-        ctx.restore();
-    }
-    
-    ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
-    
-    // Draw treads/wheels
-    ctx.fillStyle = '#4d4d4d';
-    ctx.fillRect(player.x - player.width / 2 - 5, player.y + 15, player.width + 10, 20);
-    
-    // Draw eyes (simple Wall-E style with animation)
-    ctx.fillStyle = '#ffffff';
-    
-    // Left eye
-    ctx.beginPath();
-    ctx.arc(player.x - 10, player.y + player.eyeHeight, 8, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Right eye
-    ctx.beginPath();
-    ctx.arc(player.x + 10, player.y + player.eyeHeight, 8, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Eye pupils
-    ctx.fillStyle = '#000000';
-    
-    // Animate pupils based on animation state
-    let pupilOffsetX = 0;
-    if (player.animationState === 1) pupilOffsetX = 2;
-    else if (player.animationState === 3) pupilOffsetX = -2;
-    
-    // Left pupil
-    ctx.beginPath();
-    ctx.arc(player.x - 10 + pupilOffsetX, player.y + player.eyeHeight, 4, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Right pupil
-    ctx.beginPath();
-    ctx.arc(player.x + 10 + pupilOffsetX, player.y + player.eyeHeight, 4, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Draw arms if not jumping
-    if (!player.isJumping) {
-        // Left arm with animation
-        ctx.fillStyle = '#f9c74f';
-        ctx.save();
-        ctx.translate(player.x - player.width / 2 - 10, player.y - 10);
-        ctx.rotate(Math.sin(animationTime / 200) * 0.2);
-        ctx.fillRect(0, 0, 10, 30);
-        ctx.restore();
         
-        // Right arm with animation
-        ctx.save();
-        ctx.translate(player.x + player.width / 2, player.y - 10);
-        ctx.rotate(-Math.sin(animationTime / 200) * 0.2);
-        ctx.fillRect(0, 0, 10, 30);
-        ctx.restore();
+        // Draw sprite with animation
+        const frameWidth = sprite.width / player.sprite.maxFrame;
+        const frameHeight = sprite.height;
+        
+        // Add visual effect for active power-ups
+        if (activePowerUps.shield) {
+            // Draw shield effect
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.width * 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = powerUpTypes.shield.color;
+            ctx.globalAlpha = 0.3;
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        if (activePowerUps.speedBoost) {
+            // Draw speed lines behind player
+            ctx.save();
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(player.x - player.width / 2 - 10 - i * 3, player.y - player.height / 2);
+                ctx.lineTo(player.x - player.width / 2 - 20 - i * 5, player.y + player.height / 2);
+                ctx.strokeStyle = powerUpTypes.speedBoost.color;
+                ctx.globalAlpha = 0.5 - i * 0.1;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+        
+        // Draw sprite
+        ctx.drawImage(
+            sprite,
+            player.sprite.frameX * frameWidth,
+            player.sprite.frameY * frameHeight,
+            frameWidth,
+            frameHeight,
+            player.x - player.width / 2,
+            player.y - player.height / 2,
+            player.width,
+            player.height
+        );
     } else {
-        // Arms up when jumping
-        ctx.fillStyle = '#f9c74f';
-        ctx.save();
-        ctx.translate(player.x - player.width / 2 - 10, player.y - 10);
-        ctx.rotate(-Math.PI / 4);
-        ctx.fillRect(0, 0, 10, 30);
-        ctx.restore();
+        // Fallback to basic rectangle drawing if sprite not available
+        // Draw Wall-E body
+        ctx.fillStyle = '#f9c74f'; // Yellow-orange for Wall-E
         
-        ctx.save();
-        ctx.translate(player.x + player.width / 2, player.y - 10);
-        ctx.rotate(Math.PI / 4);
-        ctx.fillRect(0, 0, 10, 30);
-        ctx.restore();
+        // Add visual effect for active power-ups
+        if (activePowerUps.shield) {
+            // Draw shield effect
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.width * 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = powerUpTypes.shield.color;
+            ctx.globalAlpha = 0.3;
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        if (activePowerUps.speedBoost) {
+            // Draw speed lines behind player
+            ctx.save();
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(player.x - player.width / 2 - 10 - i * 3, player.y - player.height / 2);
+                ctx.lineTo(player.x - player.width / 2 - 20 - i * 5, player.y + player.height / 2);
+                ctx.strokeStyle = powerUpTypes.speedBoost.color;
+                ctx.globalAlpha = 0.5 - i * 0.1;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+        
+        ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+        
+        // Draw treads/wheels
+        ctx.fillStyle = '#4d4d4d';
+        ctx.fillRect(player.x - player.width / 2 - 5, player.y + 15, player.width + 10, 20);
+        
+        // Draw eyes (simple Wall-E style with animation)
+        ctx.fillStyle = '#ffffff';
+        
+        // Left eye
+        ctx.beginPath();
+        ctx.arc(player.x - 10, player.y + player.eyeHeight, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Right eye
+        ctx.beginPath();
+        ctx.arc(player.x + 10, player.y + player.eyeHeight, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye pupils
+        ctx.fillStyle = '#000000';
+        
+        // Animate pupils based on animation state
+        let pupilOffsetX = 0;
+        if (player.animationState === 1) pupilOffsetX = 2;
+        else if (player.animationState === 3) pupilOffsetX = -2;
+        
+        // Left pupil
+        ctx.beginPath();
+        ctx.arc(player.x - 10 + pupilOffsetX, player.y + player.eyeHeight, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Right pupil
+        ctx.beginPath();
+        ctx.arc(player.x + 10 + pupilOffsetX, player.y + player.eyeHeight, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw arms if not jumping
+        if (!player.isJumping) {
+            // Left arm with animation
+            ctx.fillStyle = '#f9c74f';
+            ctx.save();
+            ctx.translate(player.x - player.width / 2 - 10, player.y - 10);
+            ctx.rotate(Math.sin(animationTime / 200) * 0.2);
+            ctx.fillRect(0, 0, 10, 30);
+            ctx.restore();
+            
+            // Right arm with animation
+            ctx.save();
+            ctx.translate(player.x + player.width / 2, player.y - 10);
+            ctx.rotate(-Math.sin(animationTime / 200) * 0.2);
+            ctx.fillRect(0, 0, 10, 30);
+            ctx.restore();
+        } else {
+            // Arms up when jumping
+            ctx.fillStyle = '#f9c74f';
+            ctx.save();
+            ctx.translate(player.x - player.width / 2 - 10, player.y - 10);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillRect(0, 0, 10, 30);
+            ctx.restore();
+            
+            ctx.save();
+            ctx.translate(player.x + player.width / 2, player.y - 10);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(0, 0, 10, 30);
+            ctx.restore();
+        }
     }
 }
 
@@ -1715,17 +1771,38 @@ window.addEventListener('resize', () => {
 
 // Initialize the game when the page loads
 window.addEventListener('load', () => {
-    // Show the start screen
-    gameStartScreen.classList.remove('hidden');
-    gamePlayScreen.classList.add('hidden');
-    gamePausedScreen.classList.add('hidden');
-    gameOverScreen.classList.add('hidden');
+    // Initialize asset loader and preload game assets
+    const assetLoader = new AssetLoader();
     
-    // Set default difficulty
-    setDifficulty('easy');
+    // Show a simple loading screen
+    assetLoader.showLoadingScreen();
     
-    // Display environmental facts
-    displayEnvironmentalFacts();
+    // Start loading assets
+    assetLoader.loadAll(() => {
+        // Assets loaded successfully, now initialize the game
+        console.log('All assets preloaded successfully');
+        
+        // Hide loading screen
+        assetLoader.hideLoadingScreen();
+        
+        // Show the start screen
+        gameStartScreen.classList.remove('hidden');
+        gamePlayScreen.classList.add('hidden');
+        gamePausedScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        
+        // Set default difficulty
+        setDifficulty('easy');
+        
+        // Display environmental facts
+        displayEnvironmentalFacts();
+        
+        // Initialize game for faster start when player clicks play
+        init();
+        
+        // Store asset loader reference globally for access throughout the game
+        window.gameAssets = assetLoader.assets;
+    });
 });
 
 // Player movement function for consistent controls
