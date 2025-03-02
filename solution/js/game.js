@@ -40,6 +40,11 @@ let animationTime = 0;
 let lastCollectTime = 0;
 let lastCollectedWasteType = null;
 let currentDifficulty = 'easy'; // Default difficulty
+let touchControls = null; // Will hold TouchControls instance
+let wasteSortingGame = null; // Will hold WasteSortingGame instance
+let wasteSortingThreshold = 10; // Trigger mini-game after collecting this many waste items
+let wasteSortingEnabled = true; // Flag to enable/disable mini-game
+let inMiniGame = false; // Flag to track if mini-game is active
 
 // Difficulty settings
 const difficultySettings = {
@@ -133,6 +138,10 @@ function init() {
     lastCollectTime = 0;
     lastCollectedWasteType = null;
     
+    // Reset mini-game state
+    wasteSortingEnabled = true;
+    inMiniGame = false;
+    
     // Apply difficulty settings
     settings.gameSpeed = difficultySettings[currentDifficulty].gameSpeed;
     settings.obstacleFrequency = difficultySettings[currentDifficulty].obstacleFrequency;
@@ -162,6 +171,20 @@ function init() {
             console.log('All sounds loaded successfully');
         }).catch(error => {
             console.warn('Error loading sounds:', error);
+        });
+    }
+    
+    // Initialize waste sorting game if available
+    if (typeof WasteSortingGame !== 'undefined') {
+        wasteSortingGame = new WasteSortingGame({
+            addScore: (bonus) => {
+                score += bonus;
+                updateScore();
+            },
+            resumeAfterMiniGame: () => {
+                inMiniGame = false;
+                resumeGame();
+            }
         });
     }
 }
@@ -200,12 +223,15 @@ function pauseGame() {
     gamePaused = true;
     cancelAnimationFrame(animationFrameId);
     
-    // Display a fact related to the last collected waste type, or a general fact
-    const factCategory = lastCollectedWasteType ? wasteCategories[lastCollectedWasteType] : null;
-    pauseScreenFactElement.textContent = getRandomFact(factCategory);
-    
-    gamePlayScreen.classList.add('hidden');
-    gamePausedScreen.classList.remove('hidden');
+    // Only show pause screen if not in mini-game
+    if (!inMiniGame) {
+        // Display a fact related to the last collected waste type, or a general fact
+        const factCategory = lastCollectedWasteType ? wasteCategories[lastCollectedWasteType] : null;
+        pauseScreenFactElement.textContent = getRandomFact(factCategory);
+        
+        gamePlayScreen.classList.add('hidden');
+        gamePausedScreen.classList.remove('hidden');
+    }
     
     // Pause background music
     if (typeof soundManager !== 'undefined') {
@@ -216,6 +242,9 @@ function pauseGame() {
 // Resume the game
 function resumeGame() {
     if (!gameActive || !gamePaused) return;
+    
+    // Don't resume if in mini-game
+    if (inMiniGame) return;
     
     gamePaused = false;
     gamePlayScreen.classList.remove('hidden');
@@ -787,6 +816,12 @@ function collectWaste(collectibleIndex) {
     lastCollectTime = currentTime;
     lastCollectedWasteType = wasteType;
     
+    // Check if we should trigger the waste sorting mini-game
+    if (wasteSortingEnabled && wasteSortingGame && !inMiniGame && 
+        wasteCollected > 0 && wasteCollected % wasteSortingThreshold === 0) {
+        triggerWasteSortingGame();
+    }
+    
     // Reset combo timer
     comboTimer = settings.comboTimeWindow;
     
@@ -811,6 +846,25 @@ function collectWaste(collectibleIndex) {
     if (typeof soundManager !== 'undefined') {
         soundManager.play('collect');
     }
+}
+
+// Trigger waste sorting mini-game
+function triggerWasteSortingGame() {
+    if (!wasteSortingGame || inMiniGame) return;
+    
+    // Pause the main game
+    pauseGame();
+    
+    // Set mini-game flag
+    inMiniGame = true;
+    
+    // Show a message to the player
+    setTimeout(() => {
+        alert("You've collected enough waste to trigger the sorting challenge! Sort the waste correctly to earn bonus points!");
+        
+        // Start the mini-game
+        wasteSortingGame.startGame();
+    }, 500);
 }
 
 // Event listeners

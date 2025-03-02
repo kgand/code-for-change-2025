@@ -468,4 +468,188 @@ button:active {
         padding: 8px 16px;
         font-size: 14px;
     }
+}
+
+/* Waste Sorting Mini-Game Styles */
+#waste-sorting-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 20px;
+    z-index: 100;
+    overflow: hidden;
+}
+
+.sorting-game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.sorting-game-header h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 28px;
+    animation: pulse 2s infinite;
+    text-shadow: 0 0 10px rgba(76, 201, 240, 0.6);
+}
+
+#sorting-score, #sorting-time {
+    background-color: rgba(76, 201, 240, 0.3);
+    border: 2px solid rgba(76, 201, 240, 0.8);
+    padding: 8px 15px;
+    border-radius: 20px;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.sorting-instructions {
+    color: #ffffff;
+    font-size: 18px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+#sorting-game-canvas {
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.sorting-bins-container {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.sorting-bin {
+    width: 120px;
+    height: 120px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    position: relative;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.sorting-bin:hover {
+    transform: scale(1.05);
+}
+
+.bin-label {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #ffffff;
+    width: 100%;
+    text-align: center;
+    padding: 5px 0;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    font-weight: bold;
+}
+
+.sorting-buttons {
+    margin-top: 10px;
+}
+
+#exit-sorting-game {
+    background-color: #e74c3c;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#exit-sorting-game:hover {
+    background-color: #c0392b;
+}
+
+#sorting-feedback {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    text-align: center;
+    display: none;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.correct-feedback {
+    background-color: rgba(46, 204, 113, 0.9);
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
+}
+
+.wrong-feedback {
+    background-color: rgba(231, 76, 60, 0.9);
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+}
+
+@media (max-width: 768px) {
+    .sorting-bins-container {
+        flex-wrap: wrap;
+    }
+    
+    .sorting-bin {
+        width: 100px;
+        height: 100px;
+        margin: 0 5px 10px;
+    }
+    
+    .sorting-game-header h2 {
+        font-size: 24px;
+    }
+    
+    #sorting-score, #sorting-time {
+        font-size: 16px;
+        padding: 6px 12px;
+    }
+    
+    #sorting-game-canvas {
+        width: 100%;
+        max-width: 400px;
+        height: 300px;
+    }
+}
+
+@media (max-width: 500px) {
+    .sorting-bin {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .bin-label {
+        font-size: 12px;
+    }
+    
+    .sorting-game-header h2 {
+        font-size: 20px;
+    }
+    
+    #sorting-game-canvas {
+        height: 250px;
+    }
 } 
