@@ -19,10 +19,12 @@ export default function Scenery() {
   this.topHeight = 100;
 
   /**
-   * Initialises the textures and raycaster/mouse used by the menu.
+   * Sets up the game environment including floors, buildings, lighting and skybox
+   * @param {THREE.Scene} scene - The scene to add environment elements to
+   * @param {THREE.Camera} camera - The camera for attaching lights
    */
   this.initialise = function (scene, camera) {
-    // Initialise perlin noise for map generation
+    // Set up perlin noise for procedural terrain generation
     this.z = this.random() * 100;
 
     this.perlin = new ImprovedNoise();
@@ -37,15 +39,18 @@ export default function Scenery() {
   };
 
   /**
-   * Initialise the buildings seen along the sides of the road.
+   * Creates waste pile buildings that line the sides of the roadway
+   * Uses procedural generation for variety in building shapes and sizes
+   * @param {THREE.Scene} scene - The scene to add buildings to
+   * @param {number} y_pos - The base Y position for buildings
    */
   this.initialiseBuildings = function (scene, y_pos) {
     var positions = [11000, -11000];
     
-    // Load waste texture once for reuse
+    // Load waste texture once for performance optimization
     const textureLoader = new THREE.TextureLoader();
     const wasteTexture = textureLoader.load('../Assets/Images/waste.jpg');
-    // Adjust texture settings for better appearance
+    // Configure texture for tiling and better visual appearance
     wasteTexture.wrapS = THREE.RepeatWrapping;
     wasteTexture.wrapT = THREE.RepeatWrapping;
     wasteTexture.repeat.set(1, 1);
@@ -53,7 +58,7 @@ export default function Scenery() {
     for (let j = 0; j < positions.length; j++) {
       var buildingsWidth = 0;
 
-      // Fill the entire depth of view
+      // Generate buildings to fill player's view distance
       while (buildingsWidth < 50000) {
         const boxDepth = 5000 + Math.random(2500),
           boxHeight = 6000 + 5000 * Math.random(),
@@ -61,14 +66,14 @@ export default function Scenery() {
 
         buildingsWidth += boxDepth;
 
-        // Replace solid color with waste texture material
+        // Use textured material for waste piles instead of solid color
         const material = new THREE.MeshStandardMaterial({
           map: wasteTexture,
           metalness: 0.3,
           roughness: 0.7,
         });
 
-        // Replace neon colors with earthy, rusty colors for building tops
+        // Earthy, rusty colors for building tops to represent oxidized/aged waste
         var topColors = [
           0x5d432c, // dark brown
           0x654321, // brown
@@ -79,16 +84,16 @@ export default function Scenery() {
         
         var col = topColors[Math.floor(Math.random() * topColors.length)];
 
-        // Use less emissive, more realistic material for the tops
+        // Subtle emissive effect for visual interest in dark environment
         const top_material = new THREE.MeshStandardMaterial({
           color: col,
           emissive: col,
-          emissiveIntensity: 0.2, // Reduced from default to be less glowy
+          emissiveIntensity: 0.2, // Low intensity for subtle glow
           metalness: 0.4,
           roughness: 0.8
         });
 
-        // Randomly select between box and cylinder
+        // Randomly alternate between cylindrical and box-shaped waste piles
         var geometry;
         var top_geometry;
         if (Math.random() < 0.5) {

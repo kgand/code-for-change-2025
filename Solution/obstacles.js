@@ -1,15 +1,15 @@
 import * as THREE from "../three.js-dev/build/three.module.js";
 
 export default function Obstacles() {
-  // Obstacles/scenery
+  // Enemy obstacles that the player must avoid
   this.obstacles = [];
   this.obstacle_rotations = [];
   
-  // Collectibles for points
+  // Collectible items that increase player score
   this.collectibles = [];
   this.collectible_rotations = [];
   
-  // Power-ups
+  // Special items that give temporary abilities
   this.powerups = [];
   this.powerup_rotations = [];
   
@@ -18,7 +18,7 @@ export default function Obstacles() {
   this.mode_began = true;
   this.planet_count = 5;
 
-  // For comet trail
+  // Particle effect parameters for comets
   this.comet_particles = [];
   this.comet_count = 5;
 
@@ -26,18 +26,20 @@ export default function Obstacles() {
   this.initial_collectible_count = 5;
   this.initial_powerup_count = 3;
   
-  // Track game progress for progressive difficulty
+  // Difficulty scaling parameters
   this.game_start_time = Date.now();
-  this.collected_count = 0; // Track how many collectibles have been collected
-  this.max_collectibles = 20; // Maximum number of collectibles to spawn at peak difficulty
+  this.collected_count = 0; // Tracks collection progress for achievement purposes
+  this.max_collectibles = 20; // Max density of collectibles at highest difficulty
 
   /**
-   * Initialises the AUTO obstacles (instead of asteroids).
+   * Creates AUTO enemy obstacles and positions them in a grid formation
+   * @param {THREE.Scene} scene - The scene to add obstacles to
+   * @param {THREE.Mesh} asteroid_mesh - The 3D model to use for enemy obstacles
    */
   this.initialiseAsteroids = function (scene, asteroid_mesh) {
     this.mode_began = true;
 
-    // Define fixed positions for better alignment
+    // Define lane positions for consistent obstacle placement
     const positions = [
       { x: -2000, y: 375 },  // Left lane, lower position
       { x: -1000, y: 375 },  // Center-left lane, lower position
@@ -52,36 +54,36 @@ export default function Obstacles() {
     ];
 
     for (let i = 0; i < this.initial_obstacle_count; i++) {
-      // Create a clone of the mesh and scale with consistent sizing
+      // Clone the mesh to avoid shared geometry issues
       const obstacle = asteroid_mesh.clone();
       
-      // Use a fixed scale for all AUTO enemies to ensure consistency
+      // Standardize obstacle size for consistent gameplay experience
       const baseScale = 150;
       obstacle.scale.set(baseScale, baseScale, baseScale);
 
-      // Get a position from our predefined array
+      // Position in lane grid using predefined coordinates
       const posIndex = i % positions.length;
       const pos = positions[posIndex];
       
-      // Set position with exact coordinates from our positions array
+      // Apply exact position from our lane configuration
       obstacle.position.x = pos.x;
       obstacle.position.y = pos.y;
       
-      // Set z position with even spacing
+      // Stagger obstacles with even spacing along z-axis
       obstacle.position.z = -50000 - (i * 5000);
       
-      // Align AUTO to face the player
-      obstacle.rotation.y = Math.PI; // Rotate to face the player
+      // Orient obstacles to face the player for better visual impact
+      obstacle.rotation.y = Math.PI; // Face the player
       obstacle.rotation.x = 0;
       obstacle.rotation.z = 0;
       
-      obstacle.name = "AUTO"; // Use consistent naming with uppercase AUTO
+      obstacle.name = "AUTO"; // Name for collision detection and game logic
       
-      // Ensure all child meshes are properly named for collision detection
+      // Ensure all mesh components have proper naming and materials
       obstacle.traverse(function(node) {
         if (node.isMesh) {
           node.name = "AUTO_part";
-          // Ensure materials are unique to prevent shared references
+          // Create unique material instances to prevent shared material issues
           if (node.material) {
             node.material = node.material.clone();
           }
@@ -91,10 +93,10 @@ export default function Obstacles() {
       scene.add(obstacle);
       this.obstacles[i] = obstacle;
 
-      // Give it a minimal rotation to avoid misalignment
+      // Apply minimal rotation to add visual interest
       this.obstacle_rotations[i] = [
-        0.05, // Consistent small rotation speed
-        0, // No rotation around y-axis to keep facing player
+        0.05, // Subtle rotation speed for x-axis
+        0, // No y-axis rotation to maintain orientation
       ];
     }
 
