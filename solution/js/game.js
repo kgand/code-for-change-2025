@@ -40,6 +40,7 @@ let animationTime = 0;
 let lastCollectTime = 0;
 let lastCollectedWasteType = null;
 let currentDifficulty = 'easy'; // Default difficulty
+let touchControls = null; // Will hold TouchControls instance
 
 // Difficulty settings
 const difficultySettings = {
@@ -164,6 +165,33 @@ function init() {
             console.warn('Error loading sounds:', error);
         });
     }
+    
+    // Set up event listeners
+    startButton.addEventListener('click', startGame);
+    pauseButton.addEventListener('click', pauseGame);
+    resumeButton.addEventListener('click', resumeGame);
+    restartButton.addEventListener('click', startGame);
+    restartFromPauseButton.addEventListener('click', startGame);
+    
+    difficultyButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Reset previously selected button
+            difficultyButtons.forEach(btn => btn.classList.remove('selected'));
+            // Set selected class on clicked button
+            button.classList.add('selected');
+            // Update current difficulty
+            currentDifficulty = button.dataset.difficulty;
+        });
+    });
+    
+    // Check if we're on a touch device
+    if (typeof TouchControls !== 'undefined' && TouchControls.isTouchDevice()) {
+        console.log('Touch device detected - enabling touch controls');
+        document.body.classList.add('touch-device');
+    }
+    
+    // Display random environmental facts
+    displayEnvironmentalFacts();
 }
 
 // Display environmental facts
@@ -190,6 +218,27 @@ function startGame() {
     // Start background music
     if (typeof soundManager !== 'undefined') {
         soundManager.startBackgroundMusic();
+    }
+    
+    // Initialize touch controls if available
+    if (typeof TouchControls !== 'undefined') {
+        touchControls = new TouchControls({
+            isRunning: () => gameActive && !gamePaused,
+            movePlayer: (direction) => {
+                if (player.lane + direction >= 0 && player.lane + direction < settings.lanes) {
+                    player.lane += direction;
+                }
+            },
+            jump: () => playerJump(),
+            togglePause: () => {
+                if (gameActive && !gamePaused) {
+                    pauseGame();
+                } else if (gameActive && gamePaused) {
+                    resumeGame();
+                }
+            }
+        });
+        console.log('Touch controls initialized');
     }
 }
 
@@ -813,6 +862,20 @@ function collectWaste(collectibleIndex) {
     }
 }
 
+// Player movement function for consistent controls
+function movePlayer(direction) {
+    if (!gameActive || gamePaused) return;
+    
+    if (player.lane + direction >= 0 && player.lane + direction < settings.lanes) {
+        player.lane += direction;
+        
+        // Play sound effect if available
+        if (typeof soundManager !== 'undefined') {
+            soundManager.playSound('move');
+        }
+    }
+}
+
 // Event listeners
 startButton.addEventListener('click', startGame);
 pauseButton.addEventListener('click', pauseGame);
@@ -825,7 +888,7 @@ if (muteButton.id === 'mute-button') {
     muteButton.addEventListener('click', () => {
         if (typeof soundManager !== 'undefined') {
             const isMuted = soundManager.toggleMute();
-            muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+            muteButton.textContent = isMuted ? '🔇' : '🔊';
         }
     });
 }
@@ -848,13 +911,6 @@ if (soundEffectsButton.id === 'sound-effects-button') {
     });
 }
 
-// Difficulty button event listeners
-difficultyButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        setDifficulty(button.dataset.difficulty);
-    });
-});
-
 // Keyboard controls
 document.addEventListener('keydown', (event) => {
     if (event.key === 'p' || event.key === 'P' || event.key === 'Escape') {
@@ -870,10 +926,10 @@ document.addEventListener('keydown', (event) => {
     
     switch (event.key) {
         case 'ArrowLeft':
-            if (player.lane > 0) player.lane--;
+            movePlayer(-1);
             break;
         case 'ArrowRight':
-            if (player.lane < settings.lanes - 1) player.lane++;
+            movePlayer(1);
             break;
         case 'ArrowUp':
         case ' ': // Space
@@ -883,7 +939,7 @@ document.addEventListener('keydown', (event) => {
             if (typeof soundManager !== 'undefined') {
                 const isMuted = soundManager.toggleMute();
                 if (muteButton.id === 'mute-button') {
-                    muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+                    muteButton.textContent = isMuted ? '🔇' : '🔊';
                 }
             }
             break;
