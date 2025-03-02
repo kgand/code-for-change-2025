@@ -186,6 +186,33 @@ button:active {
     font-weight: bold;
 }
 
+/* Environmental fact styles */
+.fact-container {
+    background-color: rgba(15, 52, 96, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0 20px;
+    max-width: 90%;
+    border: 1px solid rgba(76, 201, 240, 0.3);
+}
+
+.environmental-fact {
+    font-size: 16px;
+    font-style: italic;
+    color: #e9ecef;
+    margin: 0;
+    line-height: 1.5;
+}
+
+#start-screen-fact {
+    max-width: 100%;
+}
+
+#pause-screen-fact, #game-over-fact {
+    max-width: 100%;
+    font-size: 18px;
+}
+
 #score-container {
     position: absolute;
     top: 20px;
@@ -318,5 +345,13 @@ button:active {
     .waste-type {
         flex-direction: row;
         justify-content: center;
+    }
+    
+    .environmental-fact {
+        font-size: 14px;
+    }
+    
+    #pause-screen-fact, #game-over-fact {
+        font-size: 16px;
     }
 } 
