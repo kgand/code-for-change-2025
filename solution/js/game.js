@@ -19,6 +19,7 @@ let score = 0;
 let wasteCollected = 0;
 let animationFrameId;
 let lastTime = 0;
+let animationTime = 0;
 
 // Game settings
 const settings = {
@@ -28,7 +29,9 @@ const settings = {
     laneWidth: 200,
     lanes: 3,
     obstacleFrequency: 0.02, // Chance per frame
-    collectibleFrequency: 0.01 // Chance per frame
+    collectibleFrequency: 0.01, // Chance per frame
+    difficultyIncreaseInterval: 10000, // Increase difficulty every 10 seconds
+    lastDifficultyIncrease: 0
 };
 
 // Game objects
@@ -47,6 +50,9 @@ function init() {
     wasteCollected = 0;
     obstacles = [];
     collectibles = [];
+    animationTime = 0;
+    settings.gameSpeed = 5;
+    settings.lastDifficultyIncrease = 0;
     
     // Create player
     player = {
@@ -56,7 +62,9 @@ function init() {
         height: 70,
         velocityY: 0,
         lane: 1, // Middle lane
-        isJumping: false
+        isJumping: false,
+        animationState: 0, // For simple animation
+        eyeHeight: -20 // For eye animation
     };
     
     // Update UI
@@ -80,6 +88,9 @@ function startGame() {
 function gameLoop(timestamp) {
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
+    
+    // Update animation time
+    animationTime += deltaTime;
     
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -117,6 +128,14 @@ function updateGame(deltaTime) {
     // Update score
     score += Math.floor(deltaTime * 0.01);
     updateScore();
+    
+    // Increase difficulty over time
+    if (animationTime - settings.lastDifficultyIncrease > settings.difficultyIncreaseInterval) {
+        settings.gameSpeed += 0.5;
+        settings.obstacleFrequency += 0.002;
+        settings.collectibleFrequency += 0.001;
+        settings.lastDifficultyIncrease = animationTime;
+    }
 }
 
 // Update player position
@@ -135,6 +154,12 @@ function updatePlayer(deltaTime) {
     // Update player x position based on lane
     const targetX = (player.lane * settings.laneWidth) - (settings.laneWidth / 2);
     player.x += (targetX - player.x) * 0.1 * deltaTime * 0.1;
+    
+    // Update animation state
+    player.animationState = Math.floor(animationTime / 200) % 4;
+    
+    // Animate eyes (simple up and down movement)
+    player.eyeHeight = -20 + Math.sin(animationTime / 300) * 3;
 }
 
 // Generate obstacles
@@ -147,7 +172,8 @@ function generateObstacles() {
             y: -50,
             width: 50,
             height: 50,
-            lane: lane
+            lane: lane,
+            type: Math.floor(Math.random() * 3) // Different obstacle types
         });
     }
 }
@@ -163,7 +189,9 @@ function generateCollectibles() {
             width: 30,
             height: 30,
             lane: lane,
-            type: Math.floor(Math.random() * 3) // 0: plastic, 1: paper, 2: metal
+            type: Math.floor(Math.random() * 3), // 0: plastic, 1: paper, 2: metal
+            rotation: 0,
+            rotationSpeed: (Math.random() - 0.5) * 0.2
         });
     }
 }
@@ -184,6 +212,9 @@ function updateObstacles(deltaTime) {
 function updateCollectibles(deltaTime) {
     for (let i = collectibles.length - 1; i >= 0; i--) {
         collectibles[i].y += settings.gameSpeed * deltaTime * 0.1;
+        
+        // Rotate collectibles for visual interest
+        collectibles[i].rotation += collectibles[i].rotationSpeed;
         
         // Remove collectibles that are off-screen
         if (collectibles[i].y > canvas.height) {
@@ -256,43 +287,182 @@ function drawLanes() {
 
 // Draw player
 function drawPlayer() {
-    ctx.fillStyle = '#4cc9f0';
+    // Draw Wall-E body
+    ctx.fillStyle = '#f9c74f'; // Yellow-orange for Wall-E
     ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
     
-    // Draw eyes (simple Wall-E style)
+    // Draw treads/wheels
+    ctx.fillStyle = '#4d4d4d';
+    ctx.fillRect(player.x - player.width / 2 - 5, player.y + 15, player.width + 10, 20);
+    
+    // Draw eyes (simple Wall-E style with animation)
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(player.x - 15, player.y - 20, 10, 10);
-    ctx.fillRect(player.x + 5, player.y - 20, 10, 10);
+    
+    // Left eye
+    ctx.beginPath();
+    ctx.arc(player.x - 10, player.y + player.eyeHeight, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Right eye
+    ctx.beginPath();
+    ctx.arc(player.x + 10, player.y + player.eyeHeight, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Eye pupils
+    ctx.fillStyle = '#000000';
+    
+    // Animate pupils based on animation state
+    let pupilOffsetX = 0;
+    if (player.animationState === 1) pupilOffsetX = 2;
+    else if (player.animationState === 3) pupilOffsetX = -2;
+    
+    // Left pupil
+    ctx.beginPath();
+    ctx.arc(player.x - 10 + pupilOffsetX, player.y + player.eyeHeight, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Right pupil
+    ctx.beginPath();
+    ctx.arc(player.x + 10 + pupilOffsetX, player.y + player.eyeHeight, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw arms if not jumping
+    if (!player.isJumping) {
+        // Left arm with animation
+        ctx.fillStyle = '#f9c74f';
+        ctx.save();
+        ctx.translate(player.x - player.width / 2 - 10, player.y - 10);
+        ctx.rotate(Math.sin(animationTime / 200) * 0.2);
+        ctx.fillRect(0, 0, 10, 30);
+        ctx.restore();
+        
+        // Right arm with animation
+        ctx.save();
+        ctx.translate(player.x + player.width / 2, player.y - 10);
+        ctx.rotate(-Math.sin(animationTime / 200) * 0.2);
+        ctx.fillRect(0, 0, 10, 30);
+        ctx.restore();
+    } else {
+        // Arms up when jumping
+        ctx.fillStyle = '#f9c74f';
+        ctx.save();
+        ctx.translate(player.x - player.width / 2 - 10, player.y - 10);
+        ctx.rotate(-Math.PI / 4);
+        ctx.fillRect(0, 0, 10, 30);
+        ctx.restore();
+        
+        ctx.save();
+        ctx.translate(player.x + player.width / 2, player.y - 10);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillRect(0, 0, 10, 30);
+        ctx.restore();
+    }
 }
 
 // Draw obstacles
 function drawObstacles() {
-    ctx.fillStyle = '#e63946';
-    
     for (const obstacle of obstacles) {
-        ctx.fillRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height);
+        // Different colors for different obstacle types
+        switch (obstacle.type) {
+            case 0: // Trash pile
+                ctx.fillStyle = '#6a994e';
+                ctx.fillRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height);
+                
+                // Add some detail
+                ctx.fillStyle = '#386641';
+                ctx.fillRect(obstacle.x - obstacle.width / 4, obstacle.y - obstacle.height / 4, obstacle.width / 2, obstacle.height / 2);
+                break;
+                
+            case 1: // Broken electronics
+                ctx.fillStyle = '#bc4749';
+                ctx.fillRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height);
+                
+                // Add some detail
+                ctx.fillStyle = '#a7c957';
+                ctx.fillRect(obstacle.x - obstacle.width / 3, obstacle.y - obstacle.height / 3, obstacle.width / 6, obstacle.height / 6);
+                ctx.fillRect(obstacle.x + obstacle.width / 6, obstacle.y + obstacle.height / 6, obstacle.width / 6, obstacle.height / 6);
+                break;
+                
+            case 2: // Oil spill
+                ctx.fillStyle = '#2b2d42';
+                ctx.beginPath();
+                ctx.ellipse(obstacle.x, obstacle.y, obstacle.width / 2, obstacle.height / 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add some detail
+                ctx.fillStyle = '#5c677d';
+                ctx.beginPath();
+                ctx.ellipse(obstacle.x, obstacle.y, obstacle.width / 3, obstacle.height / 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+        }
     }
 }
 
 // Draw collectibles
 function drawCollectibles() {
     for (const collectible of collectibles) {
-        // Different colors for different waste types
+        ctx.save();
+        ctx.translate(collectible.x, collectible.y);
+        ctx.rotate(collectible.rotation);
+        
+        // Different colors and shapes for different waste types
         switch (collectible.type) {
             case 0: // Plastic
                 ctx.fillStyle = '#90e0ef';
+                ctx.beginPath();
+                ctx.moveTo(0, -collectible.height / 2);
+                ctx.lineTo(collectible.width / 2, collectible.height / 2);
+                ctx.lineTo(-collectible.width / 2, collectible.height / 2);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Add recycling symbol
+                ctx.strokeStyle = '#0077b6';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, collectible.width / 4, 0, Math.PI * 2);
+                ctx.stroke();
                 break;
+                
             case 1: // Paper
                 ctx.fillStyle = '#ffb703';
+                ctx.fillRect(-collectible.width / 2, -collectible.height / 2, collectible.width, collectible.height);
+                
+                // Add lines to represent text
+                ctx.strokeStyle = '#fb8500';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-collectible.width / 3, -collectible.height / 4);
+                ctx.lineTo(collectible.width / 3, -collectible.height / 4);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(-collectible.width / 3, 0);
+                ctx.lineTo(collectible.width / 3, 0);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(-collectible.width / 3, collectible.height / 4);
+                ctx.lineTo(collectible.width / 3, collectible.height / 4);
+                ctx.stroke();
                 break;
+                
             case 2: // Metal
                 ctx.fillStyle = '#adb5bd';
+                ctx.beginPath();
+                ctx.arc(0, 0, collectible.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add shine effect
+                ctx.fillStyle = '#dee2e6';
+                ctx.beginPath();
+                ctx.arc(-collectible.width / 6, -collectible.height / 6, collectible.width / 6, 0, Math.PI * 2);
+                ctx.fill();
                 break;
         }
         
-        ctx.beginPath();
-        ctx.arc(collectible.x, collectible.y, collectible.width / 2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.restore();
     }
 }
 
