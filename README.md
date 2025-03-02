@@ -411,7 +411,15 @@ While operating independently introduced significant challenges, it also streaml
 - Pivoting between different technical approaches could happen without extensive knowledge transfer
 
 ## Screenshots
-[Include screenshots or GIFs of gameplay here]
+![Game Screenshot 1](Images/c4c1.png)
+
+![Game Screenshot 2](Images/c4c2.png)
+
+![Game Screenshot 3](Images/c4c3.png)
+
+![Game Screenshot 4](Images/c4c4.png)
+
+![Game Screenshot 5](Images/c4c5.png)
 
 ## Future Development
 In the future, I plan to enhance Subwaste Surfer with:
