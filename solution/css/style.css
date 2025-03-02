@@ -213,6 +213,66 @@ button:active {
     font-size: 18px;
 }
 
+/* Difficulty selector styles */
+.difficulty-selector {
+    background-color: rgba(15, 52, 96, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    max-width: 90%;
+    border: 1px solid rgba(76, 201, 240, 0.3);
+}
+
+.difficulty-options {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.difficulty-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    margin: 0;
+    background-color: rgba(76, 201, 240, 0.2);
+    color: #ffffff;
+    border: 1px solid rgba(76, 201, 240, 0.5);
+}
+
+.difficulty-button:hover {
+    background-color: rgba(76, 201, 240, 0.4);
+    transform: scale(1.05);
+}
+
+.difficulty-button.selected {
+    background-color: #4cc9f0;
+    color: #16213e;
+    font-weight: bold;
+}
+
+.difficulty-button[data-difficulty="easy"] {
+    border-color: #4cc9f0;
+}
+
+.difficulty-button[data-difficulty="medium"] {
+    border-color: #f9c74f;
+}
+
+.difficulty-button[data-difficulty="hard"] {
+    border-color: #f72585;
+}
+
+.difficulty-button.selected[data-difficulty="easy"] {
+    background-color: #4cc9f0;
+}
+
+.difficulty-button.selected[data-difficulty="medium"] {
+    background-color: #f9c74f;
+}
+
+.difficulty-button.selected[data-difficulty="hard"] {
+    background-color: #f72585;
+}
+
 #score-container {
     position: absolute;
     top: 20px;
@@ -353,5 +413,15 @@ button:active {
     
     #pause-screen-fact, #game-over-fact {
         font-size: 16px;
+    }
+    
+    .difficulty-options {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .difficulty-button {
+        padding: 8px 16px;
+        font-size: 14px;
     }
 } 
