@@ -52,6 +52,8 @@ let particles = []; // Array to hold particle effects
 let backgroundLayers = []; // Array to hold background parallax layers
 let powerUps = []; // Array to hold active power-ups
 let activePowerUps = {}; // Object to track active power-up effects
+let stars = [];
+let clouds = [];
 
 // Game settings and variables
 let settings = {
@@ -71,7 +73,10 @@ let settings = {
     maxCollectibles: 15,                 // Maximum collectibles to render
     maxParticles: 100,                   // Maximum particles to render
     targetFPS: 60,                       // Target frames per second
-    frameTimeLimit: 16.67                // ~60 FPS in ms (1000/60)
+    frameTimeLimit: 16.67,               // ~60 FPS in ms (1000/60)
+    isMobileDevice: false,               // Will be set during initialization
+    mobileScaleFactor: 0.7,              // Scale factor for mobile devices
+    lowPerformanceMode: false            // For very low-end devices
 };
 
 // Difficulty settings
@@ -179,6 +184,14 @@ function setDifficulty(difficulty) {
 
 // Initialize the game
 function init() {
+    // Detect device capabilities
+    detectDeviceCapabilities();
+    
+    // Create quality settings UI for mobile
+    if (settings.isMobileDevice) {
+        createMobileQualitySettings();
+    }
+    
     // Set canvas dimensions
     canvas.width = gamePlayScreen.offsetWidth;
     canvas.height = gamePlayScreen.offsetHeight;
@@ -271,6 +284,57 @@ function init() {
     });
 }
 
+// Detect device capabilities for performance optimizations
+function detectDeviceCapabilities() {
+    // Check if this is a mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    settings.isMobileDevice = isMobile;
+    
+    // Check for device memory API
+    let deviceMemory = 4; // Default to 4GB if not available
+    if (navigator.deviceMemory) {
+        deviceMemory = navigator.deviceMemory;
+    }
+    
+    // Check for hardware concurrency (CPU cores)
+    let cpuCores = 4; // Default to 4 cores if not available
+    if (navigator.hardwareConcurrency) {
+        cpuCores = navigator.hardwareConcurrency;
+    }
+    
+    console.log(`Device info: Mobile=${isMobile}, Memory=${deviceMemory}GB, CPU cores=${cpuCores}`);
+    
+    // Try to load previously saved quality settings
+    try {
+        const savedQuality = localStorage.getItem('subwaste_quality_level');
+        if (savedQuality) {
+            console.log(`Loading saved quality level: ${savedQuality}`);
+            setQualityLevel(savedQuality);
+            return; // Exit early since we've loaded settings
+        }
+    } catch (error) {
+        console.error('Error loading quality preference:', error);
+    }
+    
+    // If no saved settings, set defaults based on device capabilities
+    if (isMobile) {
+        // Determine initial quality based on device capabilities
+        if (deviceMemory <= 2 || cpuCores <= 2) {
+            // Low-end device - use low quality
+            setQualityLevel('low');
+        } else if (deviceMemory <= 4 || cpuCores <= 4) {
+            // Mid-range device - use medium quality
+            setQualityLevel('medium');
+        } else {
+            // High-end device - use high quality but still mobile optimized
+            setQualityLevel('high');
+        }
+    } else {
+        // Desktop - use high quality
+        setQualityLevel('high');
+    }
+}
+
 // Initialize object pools for better performance
 function initializeObjectPools() {
     // Pre-allocate particles for better performance
@@ -332,57 +396,70 @@ function getScorePopupFromPool() {
     return popup;
 }
 
-// Initialize background parallax layers
+// Initialize background layers
 function initBackgroundLayers() {
-    backgroundLayers = [
-        {
-            y: 0,
-            speed: 0.2,
-            color: '#0a2342',
-            elements: generateStars(30)
-        },
-        {
-            y: 0,
-            speed: 0.5,
-            color: '#126872',
-            elements: generateClouds(5)
-        },
-        {
-            y: 0,
-            speed: 1,
-            color: '#1e5f74',
-            elements: []
-        }
-    ];
+    // Clear existing layers
+    backgroundLayers = [];
+    stars = [];
+    clouds = [];
+    
+    // Create background layers differently based on device capabilities
+    if (settings.lowPerformanceMode) {
+        // For low-performance mode, don't create complex background elements
+        return;
+    }
+    
+    // Create stars (fewer on mobile)
+    const starCount = settings.isMobileDevice ? 50 : 100;
+    generateStars(starCount);
+    
+    // Create clouds (fewer on mobile)
+    const cloudCount = settings.isMobileDevice ? 5 : 10;
+    generateClouds(cloudCount);
+    
+    // Create background layers
+    // For simplicity, we'll create placeholder image objects
+    // In a real implementation, these would be actual loaded images
+    for (let i = 0; i < 3; i++) {
+        const speedFactor = (i + 1) / 3;
+        const layer = {
+            image: {
+                // This is a placeholder for a real image
+                // In a real implementation, you would load actual images
+                width: canvas.width,
+                height: canvas.height
+            },
+            x: 0,
+            scrollSpeed: 0.5 * speedFactor,
+            opacity: 0.3 - (i * 0.1)
+        };
+        backgroundLayers.push(layer);
+    }
 }
 
 // Generate stars for background
 function generateStars(count) {
-    const stars = [];
     for (let i = 0; i < count; i++) {
         stars.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            size: Math.random() * 2 + 1,
-            opacity: Math.random() * 0.5 + 0.5
+            size: Math.random() * 2 + 0.5,
+            phase: Math.random() * Math.PI * 2
         });
     }
-    return stars;
 }
 
 // Generate clouds for background
 function generateClouds(count) {
-    const clouds = [];
     for (let i = 0; i < count; i++) {
         clouds.push({
             x: Math.random() * canvas.width,
-            y: Math.random() * (canvas.height / 2),
-            width: Math.random() * 100 + 50,
-            height: Math.random() * 40 + 20,
-            opacity: Math.random() * 0.3 + 0.1
+            y: Math.random() * (canvas.height * 0.5),
+            size: Math.random() * 30 + 20,
+            opacity: Math.random() * 0.3 + 0.1,
+            speed: Math.random() * 0.2 + 0.1
         });
     }
-    return clouds;
 }
 
 // Display environmental facts
@@ -820,6 +897,56 @@ function updateParticles(deltaTime) {
     }
 }
 
+// Draw particles with device-aware optimizations
+function drawParticles() {
+    // Skip detailed particle rendering in low performance mode
+    if (settings.lowPerformanceMode) {
+        // Draw simplified particles
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = '#ffffff';
+        
+        for (const particle of particles.slice(0, 20)) {
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.globalAlpha = 1;
+        return;
+    }
+    
+    // Regular optimized particle rendering for normal mode
+    // Batch similar particles for better performance
+    ctx.globalAlpha = 1;
+    
+    // Group particles by color for batch rendering
+    const particlesByColor = {};
+    
+    // Only process active particles
+    for (const particle of particles.concat(particlePool.filter(p => p.active))) {
+        if (!particlesByColor[particle.color]) {
+            particlesByColor[particle.color] = [];
+        }
+        particlesByColor[particle.color].push(particle);
+    }
+    
+    // Draw particles in batches by color
+    for (const color in particlesByColor) {
+        const particleBatch = particlesByColor[color];
+        ctx.fillStyle = color;
+        
+        for (const particle of particleBatch) {
+            ctx.globalAlpha = particle.opacity;
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    // Reset global alpha
+    ctx.globalAlpha = 1;
+}
+
 // Update score popups
 function updateScorePopups(deltaTime) {
     for (let i = scorePopups.length - 1; i >= 0; i--) {
@@ -953,47 +1080,74 @@ function drawGame() {
     }
 }
 
-// Draw background with parallax effect
+// Draw background with device-aware optimizations
 function drawBackground() {
-    // Draw base background
+    // Draw sky
     ctx.fillStyle = '#0f3460';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw parallax layers
-    for (const layer of backgroundLayers) {
-        // Update layer position
-        layer.y = (layer.y + settings.gameSpeed * layer.speed * 0.1) % canvas.height;
-        
-        // Draw layer
-        ctx.fillStyle = layer.color;
-        ctx.globalAlpha = 0.3;
-        ctx.fillRect(0, layer.y - canvas.height, canvas.width, canvas.height);
-        ctx.fillRect(0, layer.y, canvas.width, canvas.height);
-        ctx.globalAlpha = 1;
-        
-        // Draw layer elements
-        if (layer.elements) {
-            for (const element of layer.elements) {
-                if (element.size) {
-                    // Draw star
-                    ctx.fillStyle = '#ffffff';
-                    ctx.globalAlpha = element.opacity;
-                    ctx.beginPath();
-                    ctx.arc(element.x, (element.y + layer.y) % canvas.height, element.size, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (element.width) {
-                    // Draw cloud
-                    ctx.fillStyle = '#ffffff';
-                    ctx.globalAlpha = element.opacity;
-                    ctx.beginPath();
-                    ctx.ellipse(element.x, (element.y + layer.y) % canvas.height, element.width / 2, element.height / 2, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+    // Draw stars and parallax elements only if not in low performance mode
+    if (!settings.lowPerformanceMode) {
+        // Draw parallax background layers
+        backgroundLayers.forEach(layer => {
+            ctx.globalAlpha = layer.opacity;
+            ctx.drawImage(
+                layer.image,
+                layer.x,
+                0,
+                canvas.width,
+                canvas.height
+            );
+            
+            // Scroll the background layer
+            layer.x -= layer.scrollSpeed * settings.gameSpeed;
+            
+            // If the background has scrolled past its width, reset it
+            if (layer.x <= -canvas.width) {
+                layer.x = 0;
             }
-        }
+        });
         
-        ctx.globalAlpha = 1;
+        // Draw animated stars
+        stars.forEach(star => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.2 + Math.sin(animationTime * 0.003 + star.phase) * 0.1})`;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Draw clouds with depth effect
+        clouds.forEach(cloud => {
+            ctx.globalAlpha = cloud.opacity;
+            ctx.fillStyle = '#ffffff';
+            
+            // Draw cloud (simple shape)
+            ctx.beginPath();
+            ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+            ctx.arc(cloud.x + cloud.size * 0.5, cloud.y - cloud.size * 0.2, cloud.size * 0.7, 0, Math.PI * 2);
+            ctx.arc(cloud.x - cloud.size * 0.5, cloud.y - cloud.size * 0.1, cloud.size * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Move clouds
+            cloud.x -= cloud.speed * settings.gameSpeed;
+            
+            // If cloud moves off screen, reset it
+            if (cloud.x + cloud.size * 2 < 0) {
+                cloud.x = canvas.width + cloud.size;
+                cloud.y = Math.random() * canvas.height * 0.5;
+            }
+        });
+    } else {
+        // Simplified background for low-performance mode
+        // Draw a simple gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#0f3460');
+        gradient.addColorStop(1, '#1a1a2e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+    
+    ctx.globalAlpha = 1;
 }
 
 // Draw lanes
@@ -1747,39 +1901,6 @@ function updateActivePowerUps(deltaTime, currentTime) {
     }
 }
 
-// Draw particles with optimized rendering
-function drawParticles() {
-    // Batch similar particles for better performance
-    ctx.globalAlpha = 1;
-    
-    // Group particles by color for batch rendering
-    const particlesByColor = {};
-    
-    // Only process active particles
-    for (const particle of particles.concat(particlePool.filter(p => p.active))) {
-        if (!particlesByColor[particle.color]) {
-            particlesByColor[particle.color] = [];
-        }
-        particlesByColor[particle.color].push(particle);
-    }
-    
-    // Draw particles in batches by color
-    for (const color in particlesByColor) {
-        const particleBatch = particlesByColor[color];
-        ctx.fillStyle = color;
-        
-        for (const particle of particleBatch) {
-            ctx.globalAlpha = particle.opacity;
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-    
-    // Reset global alpha
-    ctx.globalAlpha = 1;
-}
-
 // Draw active power-up indicators
 function drawActivePowerUps() {
     let y = 100;
@@ -1811,5 +1932,185 @@ function drawActivePowerUps() {
         
         // Move down for next power-up
         y += 60;
+    }
+}
+
+// Create mobile quality settings UI
+function createMobileQualitySettings() {
+    // Check if UI already exists
+    if (document.getElementById('mobile-quality-settings')) {
+        return;
+    }
+    
+    // Create container
+    const container = document.createElement('div');
+    container.id = 'mobile-quality-settings';
+    container.className = 'mobile-quality-settings';
+    
+    // Create heading
+    const heading = document.createElement('h3');
+    heading.textContent = 'Performance Settings';
+    container.appendChild(heading);
+    
+    // Create quality selector
+    const qualitySelector = document.createElement('div');
+    qualitySelector.className = 'quality-selector';
+    
+    // Create quality options
+    const qualityOptions = [
+        { id: 'high-quality', label: 'High Quality', value: 'high' },
+        { id: 'medium-quality', label: 'Medium Quality', value: 'medium' },
+        { id: 'low-quality', label: 'Low Quality', value: 'low' }
+    ];
+    
+    // Create radio buttons for quality options
+    for (const option of qualityOptions) {
+        const label = document.createElement('label');
+        label.htmlFor = option.id;
+        label.className = 'quality-option';
+        
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'quality';
+        input.id = option.id;
+        input.value = option.value;
+        
+        // Set default based on current settings
+        if ((settings.lowPerformanceMode && option.value === 'low') ||
+            (!settings.lowPerformanceMode && settings.targetFPS === 30 && option.value === 'medium') ||
+            (!settings.lowPerformanceMode && settings.targetFPS === 60 && option.value === 'high')) {
+            input.checked = true;
+        }
+        
+        // Add event listener
+        input.addEventListener('change', () => {
+            setQualityLevel(option.value);
+        });
+        
+        const span = document.createElement('span');
+        span.textContent = option.label;
+        
+        label.appendChild(input);
+        label.appendChild(span);
+        qualitySelector.appendChild(label);
+    }
+    
+    container.appendChild(qualitySelector);
+    
+    // Add to pause screen
+    const pauseScreen = document.getElementById('game-paused');
+    if (pauseScreen) {
+        // Insert before the resume button
+        const resumeButton = document.getElementById('resume-button');
+        if (resumeButton && resumeButton.parentNode) {
+            resumeButton.parentNode.insertBefore(container, resumeButton);
+        } else {
+            pauseScreen.appendChild(container);
+        }
+    }
+    
+    // Add styles
+    addMobileQualityStyles();
+}
+
+// Add styles for mobile quality settings
+function addMobileQualityStyles() {
+    // Check if styles already exist
+    if (document.getElementById('mobile-quality-styles')) {
+        return;
+    }
+    
+    // Create style element
+    const style = document.createElement('style');
+    style.id = 'mobile-quality-styles';
+    
+    // Add CSS
+    style.textContent = `
+        .mobile-quality-settings {
+            background-color: rgba(15, 52, 96, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0 20px;
+            max-width: 90%;
+            border: 1px solid rgba(76, 201, 240, 0.3);
+        }
+        
+        .quality-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .quality-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+        
+        .quality-option input {
+            margin: 0;
+        }
+        
+        body.high-contrast .mobile-quality-settings {
+            border-color: var(--highlight);
+            background-color: var(--bg-color);
+        }
+        
+        body.larger-text .mobile-quality-settings h3 {
+            font-size: 26px;
+        }
+        
+        body.larger-text .quality-option {
+            font-size: 18px;
+        }
+    `;
+    
+    // Add to document
+    document.head.appendChild(style);
+}
+
+// Set quality level based on user selection
+function setQualityLevel(level) {
+    console.log(`Setting quality level to: ${level}`);
+    
+    switch (level) {
+        case 'high':
+            settings.lowPerformanceMode = false;
+            settings.targetFPS = 60;
+            settings.frameTimeLimit = 1000 / settings.targetFPS;
+            settings.maxParticles = settings.isMobileDevice ? 50 : 100;
+            settings.maxObstacles = 15;
+            settings.maxCollectibles = 15;
+            break;
+        
+        case 'medium':
+            settings.lowPerformanceMode = false;
+            settings.targetFPS = 30;
+            settings.frameTimeLimit = 1000 / settings.targetFPS;
+            settings.maxParticles = 30;
+            settings.maxObstacles = 10;
+            settings.maxCollectibles = 10;
+            break;
+        
+        case 'low':
+            settings.lowPerformanceMode = true;
+            settings.targetFPS = 30;
+            settings.frameTimeLimit = 1000 / settings.targetFPS;
+            settings.maxParticles = 10;
+            settings.maxObstacles = 8;
+            settings.maxCollectibles = 8;
+            break;
+    }
+    
+    // Reinitialize background layers
+    initBackgroundLayers();
+    
+    // Save preference to localStorage
+    try {
+        localStorage.setItem('subwaste_quality_level', level);
+    } catch (error) {
+        console.error('Error saving quality preference:', error);
     }
 } 
