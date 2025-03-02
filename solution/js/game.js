@@ -17,6 +17,7 @@ const finalWasteElement = document.getElementById('final-waste');
 const startScreenFactElement = document.getElementById('start-screen-fact');
 const pauseScreenFactElement = document.getElementById('pause-screen-fact');
 const gameOverFactElement = document.getElementById('game-over-fact');
+const difficultyButtons = document.querySelectorAll('.difficulty-button');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
@@ -33,18 +34,42 @@ let lastTime = 0;
 let animationTime = 0;
 let lastCollectTime = 0;
 let lastCollectedWasteType = null;
+let currentDifficulty = 'easy'; // Default difficulty
+
+// Difficulty settings
+const difficultySettings = {
+    easy: {
+        gameSpeed: 5,
+        obstacleFrequency: 0.02,
+        collectibleFrequency: 0.015,
+        difficultyIncreaseRate: 0.3
+    },
+    medium: {
+        gameSpeed: 7,
+        obstacleFrequency: 0.03,
+        collectibleFrequency: 0.012,
+        difficultyIncreaseRate: 0.5
+    },
+    hard: {
+        gameSpeed: 9,
+        obstacleFrequency: 0.04,
+        collectibleFrequency: 0.01,
+        difficultyIncreaseRate: 0.7
+    }
+};
 
 // Game settings
 const settings = {
-    gameSpeed: 5,
+    gameSpeed: 5, // Will be set based on difficulty
     gravity: 0.5,
     jumpForce: -10,
     laneWidth: 200,
     lanes: 3,
-    obstacleFrequency: 0.02, // Chance per frame
-    collectibleFrequency: 0.01, // Chance per frame
+    obstacleFrequency: 0.02, // Will be set based on difficulty
+    collectibleFrequency: 0.01, // Will be set based on difficulty
     difficultyIncreaseInterval: 10000, // Increase difficulty every 10 seconds
     lastDifficultyIncrease: 0,
+    difficultyIncreaseRate: 0.3, // Will be set based on difficulty
     comboTimeWindow: 2000, // Time window in ms for combo
     maxComboMultiplier: 5
 };
@@ -65,6 +90,25 @@ let obstacles = [];
 let collectibles = [];
 let scorePopups = [];
 
+// Set difficulty
+function setDifficulty(difficulty) {
+    currentDifficulty = difficulty;
+    
+    // Update settings based on difficulty
+    settings.gameSpeed = difficultySettings[difficulty].gameSpeed;
+    settings.obstacleFrequency = difficultySettings[difficulty].obstacleFrequency;
+    settings.collectibleFrequency = difficultySettings[difficulty].collectibleFrequency;
+    settings.difficultyIncreaseRate = difficultySettings[difficulty].difficultyIncreaseRate;
+    
+    // Update UI
+    difficultyButtons.forEach(button => {
+        button.classList.remove('selected');
+        if (button.dataset.difficulty === difficulty) {
+            button.classList.add('selected');
+        }
+    });
+}
+
 // Initialize the game
 function init() {
     // Set canvas dimensions
@@ -83,7 +127,11 @@ function init() {
     animationTime = 0;
     lastCollectTime = 0;
     lastCollectedWasteType = null;
-    settings.gameSpeed = 5;
+    
+    // Apply difficulty settings
+    settings.gameSpeed = difficultySettings[currentDifficulty].gameSpeed;
+    settings.obstacleFrequency = difficultySettings[currentDifficulty].obstacleFrequency;
+    settings.collectibleFrequency = difficultySettings[currentDifficulty].collectibleFrequency;
     settings.lastDifficultyIncrease = 0;
     
     // Create player
@@ -211,9 +259,9 @@ function updateGame(deltaTime) {
     
     // Increase difficulty over time
     if (animationTime - settings.lastDifficultyIncrease > settings.difficultyIncreaseInterval) {
-        settings.gameSpeed += 0.5;
-        settings.obstacleFrequency += 0.002;
-        settings.collectibleFrequency += 0.001;
+        settings.gameSpeed += settings.difficultyIncreaseRate;
+        settings.obstacleFrequency += 0.002 * settings.difficultyIncreaseRate;
+        settings.collectibleFrequency += 0.001 * settings.difficultyIncreaseRate;
         settings.lastDifficultyIncrease = animationTime;
     }
 }
@@ -697,6 +745,13 @@ resumeButton.addEventListener('click', resumeGame);
 restartButton.addEventListener('click', startGame);
 restartFromPauseButton.addEventListener('click', startGame);
 
+// Difficulty button event listeners
+difficultyButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        setDifficulty(button.dataset.difficulty);
+    });
+});
+
 // Keyboard controls
 document.addEventListener('keydown', (event) => {
     if (event.key === 'p' || event.key === 'P' || event.key === 'Escape') {
@@ -742,6 +797,9 @@ window.addEventListener('load', () => {
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
+    
+    // Set default difficulty
+    setDifficulty('easy');
     
     // Display environmental facts
     displayEnvironmentalFacts();
