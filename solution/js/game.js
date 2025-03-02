@@ -246,11 +246,7 @@ function startGame() {
     if (typeof TouchControls !== 'undefined') {
         touchControls = new TouchControls({
             isRunning: () => gameActive && !gamePaused,
-            movePlayer: (direction) => {
-                if (player.lane + direction >= 0 && player.lane + direction < settings.lanes) {
-                    player.lane += direction;
-                }
-            },
+            movePlayer: (direction) => movePlayer(direction),
             jump: () => playerJump(),
             togglePause: () => {
                 if (gameActive && !gamePaused) {
