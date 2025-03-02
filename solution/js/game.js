@@ -22,9 +22,13 @@ let gameActive = false;
 let gamePaused = false;
 let score = 0;
 let wasteCollected = 0;
+let comboCount = 0;
+let comboTimer = 0;
+let comboMultiplier = 1;
 let animationFrameId;
 let lastTime = 0;
 let animationTime = 0;
+let lastCollectTime = 0;
 
 // Game settings
 const settings = {
@@ -36,13 +40,23 @@ const settings = {
     obstacleFrequency: 0.02, // Chance per frame
     collectibleFrequency: 0.01, // Chance per frame
     difficultyIncreaseInterval: 10000, // Increase difficulty every 10 seconds
-    lastDifficultyIncrease: 0
+    lastDifficultyIncrease: 0,
+    comboTimeWindow: 2000, // Time window in ms for combo
+    maxComboMultiplier: 5
+};
+
+// Waste type point values
+const wastePoints = {
+    plastic: 10,  // Type 0
+    paper: 15,    // Type 1
+    metal: 25     // Type 2
 };
 
 // Game objects
 let player;
 let obstacles = [];
 let collectibles = [];
+let scorePopups = [];
 
 // Initialize the game
 function init() {
@@ -53,9 +67,14 @@ function init() {
     // Reset game state
     score = 0;
     wasteCollected = 0;
+    comboCount = 0;
+    comboTimer = 0;
+    comboMultiplier = 1;
     obstacles = [];
     collectibles = [];
+    scorePopups = [];
     animationTime = 0;
+    lastCollectTime = 0;
     settings.gameSpeed = 5;
     settings.lastDifficultyIncrease = 0;
     
@@ -120,6 +139,15 @@ function gameLoop(timestamp) {
     // Update animation time
     animationTime += deltaTime;
     
+    // Update combo timer
+    if (comboCount > 0) {
+        comboTimer -= deltaTime;
+        if (comboTimer <= 0) {
+            comboCount = 0;
+            comboMultiplier = 1;
+        }
+    }
+    
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -150,10 +178,13 @@ function updateGame(deltaTime) {
     // Update collectibles
     updateCollectibles(deltaTime);
     
+    // Update score popups
+    updateScorePopups(deltaTime);
+    
     // Check collisions
     checkCollisions();
     
-    // Update score
+    // Update score (base score from distance)
     score += Math.floor(deltaTime * 0.01);
     updateScore();
     
@@ -251,6 +282,19 @@ function updateCollectibles(deltaTime) {
     }
 }
 
+// Update score popups
+function updateScorePopups(deltaTime) {
+    for (let i = scorePopups.length - 1; i >= 0; i--) {
+        scorePopups[i].y -= 1; // Move up
+        scorePopups[i].opacity -= 0.01; // Fade out
+        
+        // Remove popups that are no longer visible
+        if (scorePopups[i].opacity <= 0) {
+            scorePopups.splice(i, 1);
+        }
+    }
+}
+
 // Check collisions
 function checkCollisions() {
     // Check obstacle collisions
@@ -274,8 +318,52 @@ function checkCollisions() {
             player.y < collectibles[i].y + collectibles[i].height &&
             player.y + player.height > collectibles[i].y
         ) {
+            // Determine points based on waste type
+            let pointsEarned = 0;
+            switch (collectibles[i].type) {
+                case 0: // Plastic
+                    pointsEarned = wastePoints.plastic;
+                    break;
+                case 1: // Paper
+                    pointsEarned = wastePoints.paper;
+                    break;
+                case 2: // Metal
+                    pointsEarned = wastePoints.metal;
+                    break;
+            }
+            
+            // Check if this is part of a combo
+            const now = animationTime;
+            if (now - lastCollectTime < settings.comboTimeWindow) {
+                comboCount++;
+                comboMultiplier = Math.min(settings.maxComboMultiplier, 1 + Math.floor(comboCount / 3));
+                pointsEarned *= comboMultiplier;
+            } else {
+                comboCount = 1;
+                comboMultiplier = 1;
+            }
+            
+            // Reset combo timer
+            comboTimer = settings.comboTimeWindow;
+            lastCollectTime = now;
+            
+            // Add points to score
+            score += pointsEarned;
+            
+            // Create score popup
+            scorePopups.push({
+                x: collectibles[i].x,
+                y: collectibles[i].y,
+                value: pointsEarned,
+                opacity: 1,
+                combo: comboMultiplier > 1 ? comboMultiplier : null
+            });
+            
+            // Update waste collected count
             wasteCollected++;
             updateWasteCollected();
+            
+            // Remove the collected item
             collectibles.splice(i, 1);
         }
     }
@@ -294,6 +382,14 @@ function drawGame() {
     
     // Draw collectibles
     drawCollectibles();
+    
+    // Draw score popups
+    drawScorePopups();
+    
+    // Draw combo indicator if active
+    if (comboCount > 0 && comboMultiplier > 1) {
+        drawComboIndicator();
+    }
 }
 
 // Draw lanes
@@ -492,6 +588,54 @@ function drawCollectibles() {
         
         ctx.restore();
     }
+}
+
+// Draw score popups
+function drawScorePopups() {
+    for (const popup of scorePopups) {
+        ctx.save();
+        ctx.globalAlpha = popup.opacity;
+        
+        // Draw score value
+        ctx.font = '20px Arial';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(`+${popup.value}`, popup.x, popup.y);
+        
+        // Draw combo multiplier if applicable
+        if (popup.combo) {
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#f72585';
+            ctx.fillText(`x${popup.combo} COMBO!`, popup.x, popup.y + 20);
+        }
+        
+        ctx.restore();
+    }
+}
+
+// Draw combo indicator
+function drawComboIndicator() {
+    const comboPercentage = comboTimer / settings.comboTimeWindow;
+    
+    // Draw combo text
+    ctx.font = 'bold 24px Arial';
+    ctx.fillStyle = '#f72585';
+    ctx.textAlign = 'center';
+    ctx.fillText(`COMBO x${comboMultiplier}`, canvas.width / 2, 50);
+    
+    // Draw combo timer bar
+    const barWidth = 200;
+    const barHeight = 10;
+    const barX = (canvas.width - barWidth) / 2;
+    const barY = 60;
+    
+    // Background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+    
+    // Progress
+    ctx.fillStyle = '#f72585';
+    ctx.fillRect(barX, barY, barWidth * comboPercentage, barHeight);
 }
 
 // Update score display
