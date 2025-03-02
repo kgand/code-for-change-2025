@@ -21,6 +21,11 @@ const difficultyButtons = document.querySelectorAll('.difficulty-button');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
+// Sound controls
+const muteButton = document.getElementById('mute-button') || document.createElement('button');
+const musicButton = document.getElementById('music-button') || document.createElement('button');
+const soundEffectsButton = document.getElementById('sound-effects-button') || document.createElement('button');
+
 // Game state
 let gameActive = false;
 let gamePaused = false;
@@ -150,6 +155,15 @@ function init() {
     // Update UI
     updateScore();
     updateWasteCollected();
+    
+    // Initialize sound manager
+    if (typeof soundManager !== 'undefined') {
+        soundManager.preloadSounds().then(() => {
+            console.log('All sounds loaded successfully');
+        }).catch(error => {
+            console.warn('Error loading sounds:', error);
+        });
+    }
 }
 
 // Display environmental facts
@@ -172,6 +186,11 @@ function startGame() {
     gamePaused = false;
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
+    
+    // Start background music
+    if (typeof soundManager !== 'undefined') {
+        soundManager.startBackgroundMusic();
+    }
 }
 
 // Pause the game
@@ -187,6 +206,11 @@ function pauseGame() {
     
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.remove('hidden');
+    
+    // Pause background music
+    if (typeof soundManager !== 'undefined') {
+        soundManager.pauseBackgroundMusic();
+    }
 }
 
 // Resume the game
@@ -198,6 +222,11 @@ function resumeGame() {
     gamePausedScreen.classList.add('hidden');
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
+    
+    // Resume background music
+    if (typeof soundManager !== 'undefined') {
+        soundManager.resumeBackgroundMusic();
+    }
 }
 
 // Game loop
@@ -366,77 +395,40 @@ function updateScorePopups(deltaTime) {
 
 // Check collisions
 function checkCollisions() {
-    // Check obstacle collisions
-    for (let i = obstacles.length - 1; i >= 0; i--) {
+    // Check for collisions with obstacles
+    for (let i = 0; i < obstacles.length; i++) {
+        const obstacle = obstacles[i];
+        
+        // Simple collision detection
         if (
-            player.x < obstacles[i].x + obstacles[i].width &&
-            player.x + player.width > obstacles[i].x &&
-            player.y < obstacles[i].y + obstacles[i].height &&
-            player.y + player.height > obstacles[i].y
+            player.x < obstacle.x + obstacle.width &&
+            player.x + player.width > obstacle.x &&
+            player.y < obstacle.y + obstacle.height &&
+            player.y + player.height > obstacle.y
         ) {
+            // Play crash sound
+            if (typeof soundManager !== 'undefined') {
+                soundManager.play('crash');
+            }
+            
+            // End the game
             gameOver();
             return;
         }
     }
     
-    // Check collectible collisions
+    // Check for collisions with collectibles
     for (let i = collectibles.length - 1; i >= 0; i--) {
+        const collectible = collectibles[i];
+        
+        // Simple collision detection
         if (
-            player.x < collectibles[i].x + collectibles[i].width &&
-            player.x + player.width > collectibles[i].x &&
-            player.y < collectibles[i].y + collectibles[i].height &&
-            player.y + player.height > collectibles[i].y
+            player.x < collectible.x + collectible.width &&
+            player.x + player.width > collectible.x &&
+            player.y < collectible.y + collectible.height &&
+            player.y + player.height > collectible.y
         ) {
-            // Store the waste type for environmental facts
-            lastCollectedWasteType = collectibles[i].type;
-            
-            // Determine points based on waste type
-            let pointsEarned = 0;
-            switch (collectibles[i].type) {
-                case 0: // Plastic
-                    pointsEarned = wastePoints.plastic;
-                    break;
-                case 1: // Paper
-                    pointsEarned = wastePoints.paper;
-                    break;
-                case 2: // Metal
-                    pointsEarned = wastePoints.metal;
-                    break;
-            }
-            
-            // Check if this is part of a combo
-            const now = animationTime;
-            if (now - lastCollectTime < settings.comboTimeWindow) {
-                comboCount++;
-                comboMultiplier = Math.min(settings.maxComboMultiplier, 1 + Math.floor(comboCount / 3));
-                pointsEarned *= comboMultiplier;
-            } else {
-                comboCount = 1;
-                comboMultiplier = 1;
-            }
-            
-            // Reset combo timer
-            comboTimer = settings.comboTimeWindow;
-            lastCollectTime = now;
-            
-            // Add points to score
-            score += pointsEarned;
-            
-            // Create score popup
-            scorePopups.push({
-                x: collectibles[i].x,
-                y: collectibles[i].y,
-                value: pointsEarned,
-                opacity: 1,
-                combo: comboMultiplier > 1 ? comboMultiplier : null
-            });
-            
-            // Update waste collected count
-            wasteCollected++;
-            updateWasteCollected();
-            
-            // Remove the collected item
-            collectibles.splice(i, 1);
+            collectWaste(i);
         }
     }
 }
@@ -736,6 +728,89 @@ function gameOver() {
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.remove('hidden');
+    
+    // Play game over sound and stop background music
+    if (typeof soundManager !== 'undefined') {
+        soundManager.pauseBackgroundMusic();
+        soundManager.play('gameOver');
+    }
+}
+
+// Player jump function
+function playerJump() {
+    if (!player.isJumping) {
+        player.velocityY = settings.jumpForce;
+        player.isJumping = true;
+        
+        // Play jump sound
+        if (typeof soundManager !== 'undefined') {
+            soundManager.play('jump');
+        }
+    }
+}
+
+// Handle collectible collection
+function collectWaste(collectibleIndex) {
+    const collectible = collectibles[collectibleIndex];
+    const wasteType = collectible.type;
+    let pointValue = 0;
+    
+    // Determine point value based on waste type
+    switch (wasteType) {
+        case 0: // Plastic
+            pointValue = wastePoints.plastic;
+            break;
+        case 1: // Paper
+            pointValue = wastePoints.paper;
+            break;
+        case 2: // Metal
+            pointValue = wastePoints.metal;
+            break;
+    }
+    
+    // Check for combo
+    const currentTime = performance.now();
+    if (currentTime - lastCollectTime < settings.comboTimeWindow) {
+        comboCount++;
+        comboMultiplier = Math.min(settings.maxComboMultiplier, comboCount);
+    } else {
+        comboCount = 1;
+        comboMultiplier = 1;
+    }
+    
+    // Apply combo multiplier
+    pointValue *= comboMultiplier;
+    
+    // Update score and stats
+    score += pointValue;
+    wasteCollected++;
+    lastCollectTime = currentTime;
+    lastCollectedWasteType = wasteType;
+    
+    // Reset combo timer
+    comboTimer = settings.comboTimeWindow;
+    
+    // Create score popup
+    scorePopups.push({
+        x: collectible.x,
+        y: collectible.y,
+        value: pointValue,
+        opacity: 1,
+        velocityY: -2,
+        combo: comboMultiplier > 1 ? comboMultiplier : null
+    });
+    
+    // Remove the collectible
+    collectibles.splice(collectibleIndex, 1);
+    
+    // Update UI
+    updateScore();
+    updateWasteCollected();
+    
+    // Play collect sound
+    if (typeof soundManager !== 'undefined') {
+        soundManager.play('collect');
+    }
 }
 
 // Event listeners
@@ -744,6 +819,34 @@ pauseButton.addEventListener('click', pauseGame);
 resumeButton.addEventListener('click', resumeGame);
 restartButton.addEventListener('click', startGame);
 restartFromPauseButton.addEventListener('click', startGame);
+
+// Sound control event listeners
+if (muteButton.id === 'mute-button') {
+    muteButton.addEventListener('click', () => {
+        if (typeof soundManager !== 'undefined') {
+            const isMuted = soundManager.toggleMute();
+            muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+        }
+    });
+}
+
+if (musicButton.id === 'music-button') {
+    musicButton.addEventListener('click', () => {
+        if (typeof soundManager !== 'undefined') {
+            const isMusicEnabled = soundManager.toggleMusic();
+            musicButton.textContent = isMusicEnabled ? 'Music Off' : 'Music On';
+        }
+    });
+}
+
+if (soundEffectsButton.id === 'sound-effects-button') {
+    soundEffectsButton.addEventListener('click', () => {
+        if (typeof soundManager !== 'undefined') {
+            const areSoundEffectsEnabled = soundManager.toggleSoundEffects();
+            soundEffectsButton.textContent = areSoundEffectsEnabled ? 'Sound Effects Off' : 'Sound Effects On';
+        }
+    });
+}
 
 // Difficulty button event listeners
 difficultyButtons.forEach(button => {
@@ -774,9 +877,14 @@ document.addEventListener('keydown', (event) => {
             break;
         case 'ArrowUp':
         case ' ': // Space
-            if (!player.isJumping) {
-                player.velocityY = settings.jumpForce;
-                player.isJumping = true;
+            playerJump();
+            break;
+        case 'm': // Toggle mute
+            if (typeof soundManager !== 'undefined') {
+                const isMuted = soundManager.toggleMute();
+                if (muteButton.id === 'mute-button') {
+                    muteButton.textContent = isMuted ? 'Unmute' : 'Mute';
+                }
             }
             break;
     }
