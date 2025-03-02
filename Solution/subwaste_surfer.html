@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Subwaste Surfer</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <link type="text/css" rel="stylesheet" href="./main.css" />
+
+    <link rel="icon" href="../Assets/favicon.ico">
+
+    <style>
+      @font-face {
+        font-family: digital_font;
+        src: url(../Assets/Font/font.ttf);
+      }
+
+      body {
+        background-color: #000000; /* Set to pure black */
+        font-family: "digital_font";
+        color: #61443e;
+      }
+      
+      /* Fullscreen styles */
+      * {
+        box-sizing: border-box;
+      }
+      
+      /* Ensure canvas fills screen */
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      
+      /* Game Instructions Overlay */
+      #instructions-overlay {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        max-width: 800px;
+        z-index: 999;
+        display: block;
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.7);
+        border: 2px solid #00ff00;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        padding: 15px;
+        color: #ffffff;
+        font-family: "digital_font";
+      }
+      
+      #instructions-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+      }
+      
+      #instructions-content h2 {
+        color: #00ff00;
+        font-size: 24px;
+        margin-bottom: 10px;
+        width: 100%;
+        text-align: center;
+      }
+      
+      #instructions-content ul {
+        padding-left: 20px;
+        margin: 5px 0;
+      }
+      
+      #instructions-content li {
+        margin: 5px 0;
+        list-style-type: none;
+        position: relative;
+        padding-left: 25px;
+      }
+      
+      #instructions-content li:before {
+        content: '🚀';
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+      
+      /* Hide close button since we don't need it anymore */
+      #close-instructions {
+        display: none;
+      }
+      
+      /* Game Start Screen */
+      #start-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.85);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        text-align: center;
+        backdrop-filter: blur(5px);
+      }
+      
+      #start-screen-content {
+        max-width: 800px;
+        padding: 30px;
+        background-color: rgba(20, 30, 20, 0.8);
+        border-radius: 15px;
+        border: 2px solid #4CAF50;
+        box-shadow: 0 0 30px rgba(76, 175, 80, 0.6);
+      }
+      
+      #start-screen h1 {
+        color: #4CAF50;
+        font-size: 48px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 15px rgba(76, 175, 80, 0.7);
+      }
+      
+      #start-screen p {
+        color: #ffffff;
+        font-size: 18px;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+      
+      #start-button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 20px;
+        margin: 20px 0;
+        cursor: pointer;
+        border-radius: 50px;
+        font-family: "digital_font";
+        transition: all 0.3s;
+        box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+      }
+      
+      #start-button:hover {
+        background-color: #3e8e41;
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
+        transform: scale(1.05);
+      }
+      
+      /* Game Over Screen */
+      #game-over-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.85);
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        text-align: center;
+        backdrop-filter: blur(5px);
+      }
+      
+      #game-over-content {
+        max-width: 800px;
+        padding: 30px;
+        background-color: rgba(30, 20, 20, 0.8);
+        border-radius: 15px;
+        border: 2px solid #ff5722;
+        box-shadow: 0 0 30px rgba(255, 87, 34, 0.6);
+      }
+      
+      #game-over-screen h1 {
+        color: #ff5722;
+        font-size: 48px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 15px rgba(255, 87, 34, 0.7);
+      }
+      
+      #environmental-fact {
+        color: #ffffff;
+        font-size: 18px;
+        margin: 20px 0;
+        padding: 15px;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        border-left: 4px solid #4CAF50;
+        font-family: digital_font, Arial, sans-serif;
+      }
+      
+      #restart-button {
+        background-color: #ff5722;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 20px;
+        margin: 20px 0;
+        cursor: pointer;
+        border-radius: 50px;
+        font-family: "digital_font";
+        transition: all 0.3s;
+        box-shadow: 0 0 15px rgba(255, 87, 34, 0.5);
+      }
+      
+      #restart-button:hover {
+        background-color: #e64a19;
+        box-shadow: 0 0 20px rgba(255, 87, 34, 0.8);
+        transform: scale(1.05);
+      }
+      
+      /* Environmental Tip Display */
+      #environmental-tip {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 300px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #4CAF50;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border-left: 3px solid #4CAF50;
+        font-size: 14px;
+        z-index: 900;
+        display: none;
+      }
+      
+      /* Intro Screen */
+      #intro-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+      }
+      
+      #intro-logo {
+        max-width: 80%;
+        max-height: 80%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="message"></div>
+    <div id="container"></div>
+    
+    <!-- Intro Screen -->
+    <div id="intro-screen">
+      <img id="intro-logo" src="../Assets/images/title.png" alt="Title Screen">
+    </div>
+    
+    <!-- Start Screen -->
+    <div id="start-screen" style="display: none;">
+      <div id="start-screen-content">
+        <h1>WALL-E's Cleanup Adventure</h1>
+        <p>Earth has been abandoned by humans due to excessive waste and pollution. You control WALL-E, the last waste allocation robot, on a mission to clean up Earth and make it habitable again.</p>
+        <p>Collect recyclable materials like metal and plastic while avoiding obstacles. Each item you collect helps restore Earth's environment!</p>
+        <p>Use arrow keys or WASD to move. Press SPACE to activate hyperdrive when charged.</p>
+        <button id="start-button">Start Cleanup Mission</button>
+      </div>
+    </div>
+    
+    <!-- Game Over Screen -->
+    <div id="game-over-screen">
+      <div id="game-over-content">
+        <h1>WALL-E Powered Down</h1>
+        <div id="environmental-fact"></div>
+        <p>Your efforts to clean up Earth have made a difference. Try again to collect more waste and help restore our planet!</p>
+        <p>Your Score: <span id="final-score">0</span></p>
+        <button id="restart-button">Restart Mission</button>
+      </div>
+    </div>
+    
+    <!-- Environmental Tip Display -->
+    <div id="environmental-tip"></div>
+    
+    <!-- Instructions Overlay -->
+    <div id="instructions-overlay" style="display: none;">
+      <div id="instructions-content">
+        <h2>WALL-E's Environmental Mission</h2>
+        <ul>
+          <li>Arrow keys or WASD: Move WALL-E between lanes and heights</li>
+          <li>SPACE key: Activate hyperdrive when fully charged</li>
+          <li>C key: Toggle camera view</li>
+          <li>ESC key: Pause game</li>
+          <li>H key: Toggle this instructions display</li>
+        </ul>
+        <h2>Environmental Objectives</h2>
+        <ul>
+          <li>Collect recyclable materials (Metal: +25pts, Plastic: +15pts)</li>
+          <li>Find Plant Boot power-ups for temporary invincibility (+1000pts)</li>
+          <li>Learn environmental facts while playing to become an eco-warrior!</li>
+          <li>Help WALL-E clean up Earth so humans can return to a healthy planet</li>
+        </ul>
+      </div>
+    </div>
+
+    <script type="importmap">
+			{
+				"imports": {
+					"three": "../three.js-dev/build/three.module.js"
+				}
+			}
+		</script>
+
+    <script type="module">
+      import * as THREE from 'three';
+
+      import { GLTFLoader } from "../three.js-dev/examples/jsm/loaders/GLTFLoader.js";
+      import { ImprovedNoise } from "../three.js-dev/examples/jsm/math/ImprovedNoise.js";
+      import Stats from "../three.js-dev/examples/jsm/libs/stats.module.js";
+
+      import { EffectComposer } from "../three.js-dev/examples/jsm/postprocessing/EffectComposer.js";
+      import { RenderPass } from "../three.js-dev/examples/jsm/postprocessing/RenderPass.js";
+      import { UnrealBloomPass } from "../three.js-dev/examples/jsm/postprocessing/UnrealBloomPass.js";
+      import { ShaderPass } from "../three.js-dev/examples/jsm/postprocessing/ShaderPass.js";
+
+      import Dash from "./dash.js";
+      import Menu from "./menu.js";
+      import Scenery from "./scenery.js";
+      import Obstacles from "./obstacles.js";
+      import WallE from "./wall_e.js";
+
+      let container;
+      let camera, scene, renderer;
+
+      // Create a stub implementation of WALL-E's compactor function instead of hyperdrive
+      const compactor = {
+        isActive: function() { return false; },
+        clearCharge: function() { },
+        iterate: function() { return 0; },
+        end: function() { return 0; },
+        setActive: function() { },
+        togglePostprocessing: function() { }
+      };
+
+      // Instructions overlay handling - only keep the keyboard shortcuts
+      // We don't need the keyboard shortcuts for instructions anymore since they're always shown
+      // Just modify the H key to toggle visibility for accessibility
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'h' || event.key === 'H') {
+          const instructionsOverlay = document.getElementById('instructions-overlay');
+          instructionsOverlay.style.display = instructionsOverlay.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+      
+      // For postprocessing
+      var composer;
+
+      // Utility
+      var last_time;
+      var score = 0;
+
+      // wall-e meshes
+      var wall_e_mesh;
+
+      // Obstacles/scenery
+      var asteroid_mesh;
+      var meshes_loaded = false;
+
+      // For game over/hit
+      var game_over = false;
+
+      // For other camera mode
+      var wall_e_front_camera = false;
+      var current_camera_y = 1000;
+      var current_camera_z = 0;
+
+      var wall_e_cam_y_offset = 250;
+
+      var wall_e_cam_x_rotation_offset = 0;
+      var wall_e_cam_y_rotation_offset = 0;
+
+      // For sound
+      var listener,
+        bg_music,
+        explosion,
+        hor_change,
+        ver_change,
+        hyper_start,
+        hyper_end,
+        hyper_during;
+      var music_started = false;
+
+      // For mouse controls
+      var mouse_controls = false;
+      var stats;
+
+      // Object instances
+      var dash, menu, scenery, obstacles, wall_e;
+
+      var godmode = false; // For marker so they can see everything
+
+      // For postprocessing
+      var postprocessingEnabled = true;
+      var bloomPass, crtPass;
+      
+      // Declare mesh variables in global scope to fix reference errors
+      var plant_boot_mesh, metal_mesh, plastic_mesh;
+      
+      // Particles array for collectible effects
+      const particles = [];
+      const particleColors = {
+        Metal: new THREE.Color(0xFFD700),   // Gold
+        Plastic: new THREE.Color(0x1E90FF), // Blue
+        PlantBoot: new THREE.Color(0x00FF00) // Green
+      };
+
+      // Environmental Facts Array
+      const environmentalFacts = [
+        "Every year, approximately 8 million metric tons of plastic enter our oceans, which is like dumping a garbage truck of plastic into the ocean every minute.",
+        "Recycling one aluminum can saves enough energy to run a TV for 3 hours.",
+        "It takes about 450 years for a plastic bottle to completely degrade.",
+        "Approximately 91% of plastic is not recycled.",
+        "The Great Pacific Garbage Patch is a collection of marine debris in the North Pacific Ocean that is twice the size of Texas.",
+        "Paper can be recycled up to 7 times before the fibers become too short to be used again.",
+        "Electronic waste (e-waste) contains toxic materials like lead, mercury, and cadmium that can leach into soil and groundwater.",
+        "The average person generates about 4.5 pounds of trash every day.",
+        "Using recycled paper instead of new paper reduces energy usage by 30-40%.",
+        "Biodegradable materials like food scraps and yard waste make up about 30% of what we throw away.",
+        "Glass bottles and jars can be recycled endlessly without loss in quality or purity.",
+        "Producing new plastic from recycled material uses only two-thirds of the energy required to manufacture it from raw materials.",
+        "The world's rainforests could disappear completely within a hundred years at the current rate of deforestation.",
+        "About one-third of all food produced worldwide is wasted, contributing to greenhouse gas emissions when it decomposes in landfills.",
+        "Planting trees remains one of the most cost-effective ways to combat climate change as they absorb wall-ebon dioxide from the atmosphere.",
+        "A single mature tree absorbs approximately 48 pounds of wall-ebon dioxide per year.",
+        "Solar panels produce clean electricity for 25+ years and pay for themselves in energy savings in just a few years.",
+        "The ocean absorbs about 30% of the wall-ebon dioxide released into the atmosphere, which leads to ocean acidification.",
+        "Composting food scraps and yard waste reduces the amount of methane (a potent greenhouse gas) produced in landfills.",
+        "Using public transportation, wall-epooling, or biking instead of driving alone can significantly reduce your wall-ebon footprint."
+      ];
+      
+      // Environmental Tips Array
+      const environmentalTips = [
+        "Tip: Bring reusable bags when shopping to reduce plastic waste.",
+        "Tip: Use a reusable water bottle instead of buying single-use plastic bottles.",
+        "Tip: Turn off lights and electronics when not in use to save energy.",
+        "Tip: Try composting food scraps to reduce landfill waste.",
+        "Tip: Consider walking, biking, or using public transportation instead of driving.",
+        "Tip: Choose products with minimal packaging to reduce waste.",
+        "Tip: Fix leaky faucets to conserve water.",
+        "Tip: Plant native species in your garden to support local ecosystems.",
+        "Tip: Use cold water for laundry when possible to save energy.",
+        "Tip: Consider participating in local clean-up events in your community."
+      ];
+
+      // Game State Variables
+      let gameStarted = false;
+      let currentTip = 0;
+      let tipInterval;
+
+      // Message queue system for handling multiple sequential messages
+      const messageQueue = [];
+      let processingMessage = false;
+      let lastMessageType = null;
+      let lastMessageTime = 0;
+
+      function addToMessageQueue(config) {
+        const currentTime = Date.now();
+        
+        // Prevent duplicate messages of the same type within 300ms
+        if (lastMessageType === config.type && currentTime - lastMessageTime < 300) {
+          return;
+        }
+        
+        // Update tracking variables
+        lastMessageType = config.type;
+        lastMessageTime = currentTime;
+        
+        // Add to queue
+        messageQueue.push(config);
+        if (!processingMessage) {
+          processNextMessage();
+        }
+      }
+
+      function processNextMessage() {
+        if (messageQueue.length === 0) {
+          processingMessage = false;
+          return;
+        }
+        
+        processingMessage = true;
+        const { type, points, position, isPlantBoot } = messageQueue.shift();
+        
+        // Create the message element
+        let messageEl = document.getElementById("collection-message");
+        if (!messageEl) {
+          messageEl = document.createElement("div");
+          messageEl.id = "collection-message";
+          messageEl.style.position = "absolute";
+          messageEl.style.top = "20%";
+          messageEl.style.left = "0";
+          messageEl.style.width = "100%";
+          messageEl.style.textAlign = "center";
+          messageEl.style.fontSize = "28px";
+          messageEl.style.fontWeight = "bold";
+          messageEl.style.fontFamily = "digital_font";
+          messageEl.style.zIndex = "1000";
+          messageEl.style.pointerEvents = "none";
+          document.body.appendChild(messageEl);
+        }
+        
+        // Configure the message based on type
+        if (isPlantBoot) {
+          messageEl.textContent = `PLANT BOOT! (+1000)`;
+          messageEl.style.color = "lime";
+          messageEl.style.textShadow = "0 0 15px rgba(0,255,0,0.7)"; // Green glow
+        } else {
+          messageEl.textContent = `Collected ${type} (+${points})`;
+          messageEl.style.color = type === "Metal" ? "lightgreen" : "lightblue";
+          messageEl.style.textShadow = type === "Metal" ? 
+            "0 0 15px rgba(0,255,0,0.7)" : // Green glow for Metal
+            "0 0 15px rgba(0,128,255,0.7)"; // Blue glow for Plastic
+        }
+        
+        messageEl.style.opacity = "1";
+        messageEl.style.display = "block";
+        
+        // Function to fade out message
+        function fadeOutMessage() {
+          let opacity = 1;
+          const fadeOut = setInterval(() => {
+            opacity -= 0.1; // Faster fade (0.1 instead of 0.05)
+            if (messageEl) {
+              messageEl.style.opacity = opacity;
+            }
+            if (opacity <= 0) {
+              clearInterval(fadeOut);
+              if (messageEl) {
+                messageEl.style.display = "none";
+                // Process the next message in queue immediately
+                processNextMessage();
+              }
+            }
+          }, 30); // Faster interval (30ms instead of 50ms)
+        }
+        
+        // Display for a shorter time before fading (800ms instead of 1500ms)
+        setTimeout(() => {
+          fadeOutMessage();
+        }, 800);
+      }
+
+      function updateScoreDisplay() {
+        // Update the score display immediately
+        dash.update(
+          wall_e.getSpeed(), 
+          score, 
+          wall_e.wallE_mesh ? wall_e.wallE_mesh.position.x : 0
+        );
+      }
+
+      init();
+      animate();
+
+      /**
+       * Initialises the game, populates global variables and initialises
+       * everything that needs to be initialised for the game to run.
+       */
+      function init() {
+        // Add the event listeners for game controls
+        document.addEventListener("mousemove", onMouseMove, false);
+        document.addEventListener("mousedown", onMouseDown, false);
+        window.addEventListener("resize", onWindowResize);
+
+        // For FPS counter
+        stats = Stats();
+        document.body.appendChild(stats.dom);
+
+        // Get container
+        container = document.getElementById("container");
+        
+        // Clear any existing canvases in the container
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
+        // Initialise scene
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x2a2018, 0.000005); // Significantly reduced fog density for better visibility
+        
+        // Add lighting to see the models properly - increase overall intensity
+        // Main ambient light - balanced for visibility without overexposure
+        const ambientLight = new THREE.AmbientLight(0x5a4b3e, 2.0); // Increased from 1.2 to 2.0
+        scene.add(ambientLight);
+        
+        // Directional light shining from above - softer to avoid harsh shadows
+        const directionalLight = new THREE.DirectionalLight(0xceb897, 2.5); // Increased from 1.5 to 2.5
+        directionalLight.position.set(0, 2000, 1000);
+        scene.add(directionalLight);
+        
+        // Add spotlight to illuminate the player area without overwhelming the scene
+        const playerSpotlight = new THREE.SpotLight(0xfff2db, 3.0); // Increased from 2.0 to 3.0
+        playerSpotlight.position.set(0, 3000, 0);
+        playerSpotlight.angle = Math.PI / 3;
+        playerSpotlight.penumbra = 0.3;
+        playerSpotlight.decay = 0.3; // Reduced decay from 0.5 to 0.3 for longer light reach
+        playerSpotlight.distance = 15000; // Increased distance from 10000 to 15000
+        scene.add(playerSpotlight);
+        
+        // Add balanced side lights 
+        const leftLight = new THREE.DirectionalLight(0xc9a87c, 1.5); // Increased from 1.0 to 1.5
+        leftLight.position.set(3000, 1000, 0);
+        scene.add(leftLight);
+        
+        const rightLight = new THREE.DirectionalLight(0xc9a87c, 1.5); // Increased from 1.0 to 1.5
+        rightLight.position.set(-3000, 1000, 0);
+        scene.add(rightLight);
+        
+        // Add back light for separation
+        const backLight = new THREE.DirectionalLight(0xdaa06d, 1.2); // Increased from 0.8 to 1.2
+        backLight.position.set(0, 1000, 3000);
+        scene.add(backLight);
+
+        loadMeshes();
+
+        // Initialise the dash
+        dash = new Dash();
+        dash.initialise(scene);
+
+        // Initialise the menu
+        menu = new Menu();
+        menu.initialise(scene);
+
+        // Define the renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        // Add tone mapping with balanced exposure
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.toneMappingExposure = 2.5; // Increased from 1.6 to 2.5 for much better brightness
+        container.appendChild(renderer.domElement);
+
+        // Composer for postprocessing
+        const canvas = renderer.domElement;
+        composer = new EffectComposer(renderer);
+        composer.setSize(canvas.width, canvas.height);
+
+        // Define the camera
+        camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight,
+          1,
+          50000
+        );
+        camera.position.set(0, current_camera_y, current_camera_z);
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.lookAt(0, 950, -5000);
+
+        // create an AudioListener and add it to the camera
+        listener = new THREE.AudioListener();
+        camera.add(listener);
+
+        initialiseAudio();
+
+        // initialise obstacles
+        obstacles = new Obstacles();
+
+        // Initialise the scenery
+        scenery = new Scenery();
+        scenery.initialise(scene, camera);
+
+        // Initialise the player
+        wall_e = new WallE();
+        wall_e.initialise(scene);
+
+        // Initialise postprocessing
+        initialisePostProcessing();
+
+        // Define the keyboard controls
+        keyControls();
+
+        // Set a simple dark background color (solid color background)
+        scene.background = new THREE.Color(0x1a1a33); // Slightly lighter blue-black background
+        
+        // Create starfield as the only background
+        createStarField();
+        
+        // Create a star field as background
+        function createStarField() {
+          console.log("Adding star field");
+          
+          const starGeometry = new THREE.BufferGeometry();
+          const starMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 3, // Increased from 2 to 3 for more visible stars
+            transparent: true,
+            opacity: 0.9 // Increased opacity from default 1.0 to 0.9
+          });
+          
+          const starVertices = [];
+          // Create stars at a far distance to ensure they're behind all objects
+          const radius = 45000; // Large radius to ensure stars are far back
+          
+          for (let i = 0; i < 25000; i++) { // Increased from 20000 to 25000 stars
+            // Create points on a sphere to ensure stars stay in background
+            const u = Math.random();
+            const v = Math.random();
+            const theta = 2 * Math.PI * u;
+            const phi = Math.acos(2 * v - 1);
+            
+            const x = radius * Math.sin(phi) * Math.cos(theta);
+            const y = radius * Math.sin(phi) * Math.sin(theta);
+            const z = radius * Math.cos(phi);
+            
+            starVertices.push(x, y, z);
+          }
+          
+          starGeometry.setAttribute(
+            'position',
+            new THREE.Float32BufferAttribute(starVertices, 3)
+          );
+          
+          const stars = new THREE.Points(starGeometry, starMaterial);
+          stars.renderOrder = -1000; // Ensure stars render before other objects
+          scene.add(stars);
+        }
+
+        // Set the beginning time for mode changes
+        last_time = Math.round(new Date().getTime() / 1000);
+
+        // Add postprocessing passes
+        composer.addPass(bloomPass);
+        composer.addPass(crtPass);
+      }
+
+      /**
+       * The function called every time there is an animation frame.
+       */
+      function animate() {
+        stats.update();
+
+        // Get the animation frame
+        requestAnimationFrame(animate);
+        
+        // Get delta time for smooth animations
+        const time = performance.now() * 0.001; // current time in seconds
+        const delta = Math.min(time - (last_time || time), 0.1); // max 0.1 seconds delta
+        last_time = time;
+        
+        // Don't run game logic if it hasn't started yet
+        if (!gameStarted) {
+          // Always render the scene with composer, even when game hasn't started
+          // This allows the start screen and background to be visible
+          composer.render();
+          return;
+        }
+
+        if (!menu.isPaused()) {
+          if (!menu.isActive() || game_over) {
+            if (!meshes_loaded) {
+              // Ensure meshes loaded
+              meshes_loaded = obstacles.initialiseAsteroids(
+                scene,
+                asteroid_mesh
+              );
+              wall_e.initialiseMeshes(wall_e_mesh);
+            }
+
+            // Update dash and camera positions
+            dash.update(
+              wall_e.getSpeed(),
+              score,
+              wall_e.wallE_mesh ? wall_e.wallE_mesh.position.x : 0
+            );
+            
+            // Update particles for collection effects
+            if (typeof updateParticles === 'function') {
+              updateParticles(delta);
+            }
+
+            camera.position.z = current_camera_z;
+
+            if (wall_e_front_camera) {
+              wall_e_cam_x_rotation_offset =
+                wall_e_cam_y_offset * Math.cos(wall_e_mesh.rotation.z + Math.PI / 2);
+              wall_e_cam_y_rotation_offset =
+                wall_e_cam_y_offset * Math.sin(wall_e_mesh.rotation.z + Math.PI / 2);
+
+              camera.position.x =
+                wall_e_mesh.position.x + wall_e_cam_x_rotation_offset;
+              camera.position.y =
+                wall_e_mesh.position.y + wall_e_cam_y_rotation_offset;
+            } else {
+              camera.position.x = wall_e_mesh.position.x;
+              camera.position.y = current_camera_y;
+
+              if (current_camera_y == 1000 && current_camera_z == 0) {
+                camera.lookAt(camera.position.x, 950, -5000);
+              }
+            }
+
+            if (!game_over) { // Game in progress
+              // Move the buttons backwards if the game is in progress
+              menu.moveOut();
+              dash.updateStatus(obstacles.getCurrentStatus());
+
+              if (compactor.isActive()) { // In compactor mode
+                wall_e.setSpeed(
+                  compactor.iterate(wall_e_mesh, camera, wall_e.getSpeed(), composer)
+                );
+
+                if (wall_e.getSpeed() < 2500) { // Compactor mode ended
+                  if (!wall_e_front_camera) dash.show();
+
+                  if (hyper_end && hyper_end.buffer) {
+                    hyper_end.play();
+                  }
+                  if (hyper_during && hyper_during.buffer) {
+                    hyper_during.stop();
+                  }
+                  wall_e.moveTo(375);
+                }
+
+                wall_e.verticalMovement();
+              } else { // Not in compactor mode
+                camera.lookAt(camera.position.x, 950, -5000);
+
+                wall_e.move();
+
+                if (wall_e.collisionDetection(obstacles, scene) && !game_over)
+                  gameOver();
+
+                obstacles.move(
+                  wall_e.getSpeed(),
+                  scene,
+                  asteroid_mesh
+                );
+
+                // Sync camera rotation with wall-e rotation
+                if (wall_e_front_camera) {
+                  camera.rotation.x = wall_e_mesh.rotation.x;
+                  camera.rotation.y = wall_e_mesh.rotation.y;
+                  camera.rotation.z = wall_e_mesh.rotation.z;
+                }
+
+                wall_e.rearParticles();
+                scenery.move(scene, wall_e.getSpeed());
+
+                last_time = obstacles.modeChanges(last_time);
+                
+                // Handle collectible pickup
+                var collectedItem = wall_e.getCollectedObject();
+                if (collectedItem) {
+                  console.log("Collected collectible:", collectedItem); // Debugging
+                  
+                  // Track collectible for progressive difficulty
+                  if (obstacles && typeof obstacles.collectibleCollected === 'function') {
+                    obstacles.collectibleCollected();
+                  }
+                  
+                  let type, points;
+                  if (collectedItem === "Metal") {
+                    type = "Metal";
+                    points = 25;
+                    createCollectionParticles(scene, wall_e.wallE_mesh.position, type, 20);
+                  } else if (collectedItem === "Plastic") {
+                    type = "Plastic";
+                    points = 15;
+                    createCollectionParticles(scene, wall_e.wallE_mesh.position, type, 20);
+                  }
+                  
+                  // Update score
+                  score += points;
+                  
+                  // Add to message queue instead of showing immediately
+                  addToMessageQueue({
+                    type,
+                    points,
+                    position: wall_e.wallE_mesh.position,
+                    isPlantBoot: false
+                  });
+                  
+                  // Update the score display
+                  updateScoreDisplay();
+                }
+                
+                // Handle powerup pickup
+                var collectedPowerup = wall_e.getCollectedPowerup();
+                if (collectedPowerup) {
+                  console.log("Collected powerup:", collectedPowerup); // Debugging
+                  if (collectedPowerup === "PlantBoot") {
+                    // The Plant Boot gives temporary invincibility and bonus points
+                    score += 1000;
+                    
+                    // Create green particles for boot collection
+                    if (wall_e.wallE_mesh && wall_e.wallE_mesh.position) {
+                      createCollectionParticles(scene, wall_e.wallE_mesh.position, "PlantBoot", 30);
+                    }
+                    
+                    // Add plant boot message to queue - use this message system only
+                    addToMessageQueue({
+                      type: "PlantBoot",
+                      points: 1000,
+                      position: wall_e.wallE_mesh.position,
+                      isPlantBoot: true
+                    });
+                    
+                    // Enable godmode for temporary invincibility against AUTO enemies only
+                    godmode = true;
+                    
+                    // Track invincibility time
+                    let invincibilityTime = 5; // 5 seconds
+                    
+                    // Update status to show invincibility is active with green glow effect
+                    dash.updateStatus(`INVINCIBILITY ACTIVE: ${invincibilityTime}s`);
+                    dash.status_text.style.color = "#00ff00"; // Bright green
+                    dash.status_text.style.textShadow = "0 0 10px rgba(0,255,0,0.7)"; // Green glow
+                    
+                    // Create countdown interval
+                    const invincibilityInterval = setInterval(() => {
+                      invincibilityTime--;
+                      if (invincibilityTime > 0) {
+                        dash.updateStatus(`INVINCIBILITY ACTIVE: ${invincibilityTime}s`);
+                      }
+                    }, 1000);
+                    
+                    // After 5 seconds, turn off godmode
+                    setTimeout(() => { 
+                      godmode = false; 
+                      clearInterval(invincibilityInterval); // Stop the countdown
+                      // Clear status text when invincibility ends
+                      dash.updateStatus("");
+                      dash.status_text.style.color = "gray"; // Reset to default color
+                      dash.status_text.style.textShadow = "none"; // Remove glow effect
+                    }, 5000); // 5 seconds of invincibility
+                    
+                    // Update the score display immediately
+                    dash.update(
+                      wall_e.getSpeed(), 
+                      score, 
+                      wall_e.wallE_mesh ? wall_e.wallE_mesh.position.x : 0
+                    );
+                  }
+                }
+                
+                // Update wall-e animation
+                if (wall_e_mesh && wall_e_mesh.visible) {
+                  // Here we would add any WALL-E specific animations
+                  // Since WALL-E doesn't have animations, we're using the wall-e animations
+                }
+              }
+            }
+          } else { // Game not in progress
+              obstacles.rotateObjects();
+              menu.moveIn();
+              wall_e.afterHitPhysics();
+          }
+        }
+
+        // Always render the scene with composer at the end of the animation loop
+        composer.render();
+      }
+
+      /**
+       * The function called every time there is a mouse movement, used
+       * to move the wall-e when the player has activated mouse controls.
+       */
+      function onMouseMove(event) {
+        menu.updateMouse(event);
+
+        if (
+          !game_over &&
+          !menu.isPaused() &&
+          !compactor.isActive() &&
+          mouse_controls
+        ) {
+          var x = (event.clientX / window.innerWidth) * 2 - 1;
+          var y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+          var col = Math.floor(3 * (x / 2 + 0.5));
+          var row = Math.floor(2 * (y / 2 + 0.5));
+
+          var position = wall_e.getPosition();
+
+          if (!wall_e.isChangingLane()) {
+            if (position[0] < col && wall_e.moveRight()) {
+              if (hor_change && hor_change.buffer) {
+                hor_change.play();
+              }
+            } else if (position[0] > col && wall_e.moveLeft()) {
+              if (hor_change && hor_change.buffer) {
+                hor_change.play();
+              }
+            }
+          }
+
+          if (wall_e.isChangingLane()) {
+            if (col == 2 && position[0] == 1) {
+              wall_e.moveRight();
+            } else if (col == 0 && position[0] == 1) {
+              wall_e.moveLeft();
+            }
+          }
+
+          if (!wall_e.isChangingHeight()) {
+            if (position[1] > row && wall_e.moveDown()) {
+              if (ver_change && ver_change.buffer) {
+                ver_change.play();
+              }
+              if (wall_e_front_camera) current_camera_y += wall_e.getHeightSep();
+            }
+
+            if (position[1] < row && wall_e.moveUp()) {
+              if (ver_change && ver_change.buffer) {
+                ver_change.play();
+              }
+              if (wall_e_front_camera) current_camera_y += wall_e.getHeightSep();
+            }
+          }
+        }
+      }
+
+      /**
+       * This is the function called every time there is a mouse press.
+       */
+      function onMouseDown(event) {
+        var pressed = menu.checkForPress(camera);
+
+        if (pressed == "Start" && !menu.isPaused()) {
+          menu.setActive(false);
+
+          last_time = Math.round(new Date().getTime() / 1000);
+
+          compactor.clearCharge();
+
+          // If the game was over, restart it
+          if (game_over) reset();
+        }
+      }
+
+      /**
+       * Function that is called every time the size of the window changes.
+       */
+      function onWindowResize() {
+        // Reset the camera
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        // Set the renderer size to the new size
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Reset the HTML dash text and dash
+        dash.resetText();
+        dash.update(wall_e.getSpeed(), score, wall_e_mesh.position.x);
+      }
+
+      /**
+       * Sets up the keyboard controls available to the user.
+       */
+      function keyControls() {
+        document.onkeydown = function (e) {
+          switch (e.keyCode) {
+            case 13: // Enter key - Start or restart game
+              if (document.getElementById('start-screen').style.display !== 'none') {
+                startGame();
+              } else if (document.getElementById('game-over-screen').style.display === 'flex') {
+                restartGame();
+              }
+              break;
+            case 37: // Move left
+              if (
+                !compactor.isActive() &&
+                wall_e.moveLeft() &&
+                !menu.isPaused() &&
+                !menu.isActive() && 
+                !game_over && 
+                gameStarted
+              ) {
+                // Safely play sound
+                if (hor_change && hor_change.buffer) {
+                  hor_change.play();
+                }
+              }
+              break;
+            case 39: // Move right
+              if (
+                !compactor.isActive() &&
+                wall_e.moveRight() &&
+                !menu.isPaused() &&
+                !menu.isActive() && 
+                !game_over && 
+                gameStarted
+              ) {
+                // Safely play sound
+                if (hor_change && hor_change.buffer) {
+                  hor_change.play();
+                }
+              }
+              break;
+            case 38: // Move up
+              if (
+                !compactor.isActive() &&
+                wall_e.moveUp() &&
+                !menu.isPaused() &&
+                !menu.isActive() && 
+                !game_over && 
+                gameStarted
+              ) {
+                // Safely play sound
+                if (ver_change && ver_change.buffer) {
+                  ver_change.play();
+                }
+                if (wall_e_front_camera) current_camera_y += wall_e.getHeightSep();
+              }
+              break;
+            case 40: // Move down
+              if (
+                !compactor.isActive() &&
+                wall_e.moveDown() &&
+                !menu.isPaused() &&
+                !menu.isActive() && 
+                !game_over && 
+                gameStarted
+              ) {
+                // Safely play sound
+                if (ver_change && ver_change.buffer) {
+                  ver_change.play();
+                }
+                if (wall_e_front_camera) current_camera_y -= wall_e.getHeightSep();
+              }
+              break;
+            case 67: // Camera change
+              if (
+                !game_over &&
+                !compactor.isActive() &&
+                !menu.isActive() &&
+                !menu.isPaused() && 
+                gameStarted
+              ) {
+                wall_e_front_camera = !wall_e_front_camera;
+
+                if (!wall_e_front_camera) {
+                  switchToOverheadView();
+                } else {
+                  switchToBonnetView();
+                }
+              }
+              break;
+            case 72: // 'H' key - Toggle instructions visibility
+              const instructionsOverlay = document.getElementById('instructions-overlay');
+              instructionsOverlay.style.display = instructionsOverlay.style.display === 'none' ? 'block' : 'none';
+              break;
+            case 77: // Mouse controls (m key)
+              if (gameStarted) {
+              mouse_controls = !mouse_controls;
+              }
+              break;
+            case 71: // Key controls (k key)
+              if (gameStarted) {
+              godmode = !godmode;
+              }
+              break;
+            case 27: // pause menu
+              // Only allow pausing if game has started
+              if (gameStarted && !game_over) {
+              // First check if instructions are visible - no need since it's always below
+              last_time = menu.togglePauseMenu(
+                composer,
+                last_time,
+                compactor.isActive(),
+                wall_e_mesh.position.x
+              );
+
+              if (menu.isPaused()) {
+                hyper_during.pause();
+              } else if (!menu.isPaused() && compactor.isActive()) {
+                hyper_during.play();
+              }
+              }
+              break;
+          }
+        };
+      }
+
+      /**
+       * Changes the camera to the overhead view.
+       */
+      function switchToOverheadView() {
+        dash.show();
+        wall_e_front_camera = false;
+
+        camera.rotation.x = 0;
+        camera.rotation.y = 0;
+        camera.rotation.z = 0;
+
+        current_camera_z = 0;
+        current_camera_y = 1000;
+      }
+
+      /**
+       * Changes the camera to the bonnet view.
+       */
+      function switchToBonnetView() {
+        dash.hide();
+        wall_e_front_camera = true;
+
+        current_camera_z = -2950;
+        current_camera_y = wall_e_mesh.position.y + wall_e_cam_y_offset;
+      }
+
+      /**
+       * Initialises the background track and sounds used by the game.
+       */
+      function initialiseAudio() {
+        const audioLoader = new THREE.AudioLoader();
+
+        // Define the global audio sources and use safe defaults
+        explosion = new THREE.Audio(listener);
+        hor_change = new THREE.Audio(listener);
+        ver_change = new THREE.Audio(listener);
+        hyper_end = new THREE.Audio(listener);
+        hyper_start = new THREE.Audio(listener);
+        hyper_during = new THREE.Audio(listener);
+
+        // Safe function to play sound that checks if the sound is ready
+        function safePlaySound(sound) {
+          if (sound && sound.buffer && typeof sound.play === 'function') {
+            sound.play();
+          }
+        }
+
+        // Helper to load audio with error handling
+        function loadAudioWithErrorHandling(path, sound, volume = 1.0) {
+          audioLoader.load(
+            path,
+            function(buffer) {
+              sound.setBuffer(buffer);
+              sound.setVolume(volume);
+            },
+            undefined,
+            function(error) {
+              console.error(`Error loading audio ${path}:`, error);
+            }
+          );
+          return sound;
+        }
+
+        // Load all sound effects with error handling
+        loadAudioWithErrorHandling("../Assets/Sounds/explosion.mp3", explosion, 0.5);
+        loadAudioWithErrorHandling("../Assets/Sounds/hor_change.wav", hor_change, 0.01);
+        loadAudioWithErrorHandling("../Assets/Sounds/vert_change.wav", ver_change, 0.3);
+        loadAudioWithErrorHandling("../Assets/Sounds/start_teleport.mp3", hyper_end, 0.1);
+        loadAudioWithErrorHandling("../Assets/Sounds/end_teleport.mp3", hyper_start, 0.1);
+        loadAudioWithErrorHandling("../Assets/Sounds/hyperdrive_during.wav", hyper_during, 0.01);
+
+        // Load backtrack and set it as the Audio object's buffer
+        bg_music = new THREE.Audio(listener);
+        
+        audioLoader.load("../Assets/Sounds/music.mp3", 
+          function (buffer) {
+            bg_music.setBuffer(buffer);
+            bg_music.setLoop(true);
+            bg_music.setVolume(1.5);
+            bg_music.play();
+          },
+          undefined,
+          function (error) {
+            console.error("Error loading background music:", error);
+          }
+        );
+
+        music_started = true;
+      }
+
+      /**
+       * Loads audio file at path and returns THREE.Audio
+       */
+      function loadAudio(loader, path, volume){
+        var audio = new THREE.Audio(listener);
+
+        // Load explosion sound effect
+        loader.load(
+          path,
+          function (buffer) {
+            audio.setBuffer(buffer);
+            audio.setVolume(volume);
+          },
+          undefined,
+          function (error) {
+            console.error(`Error loading ${path}:`, error);
+          }
+        );
+
+        return audio;
+      }
+
+      /**
+       * Resets the game to its initial state after player loses.
+       */
+      function reset() {
+        // Clear existing objects from the scene
+        obstacles.reset(scene);
+
+        // Reset global variables
+        compactor.setActive(false);
+        compactor.clearCharge();
+        godmode = false; // Reset godmode status
+        dash.updateStatus(""); // Clear status text
+        dash.status_text.style.color = "gray"; // Reset to default color
+        dash.status_text.style.textShadow = "none"; // Remove glow effect
+
+        wall_e.reset(scene);
+
+        score = 0;
+
+        game_over = false;
+        
+        // Reset explosion sound to original volume
+        if (explosion && explosion.buffer) {
+          explosion.setVolume(0.5);
+        }
+
+        // Reset the camera
+        if (!wall_e_front_camera) {
+          current_camera_z = 0;
+          current_camera_y = 1000;
+        } else {
+          current_camera_z = -2950;
+          current_camera_y = wall_e_mesh.position.y + wall_e_cam_y_offset;
+        }
+
+        // Reset the button positions
+        menu.setButtonsX(0);
+
+        // Reinitialise needed objects
+        obstacles.initialiseAsteroids(scene, asteroid_mesh);
+
+        // Reset time
+        last_time = Math.round(new Date().getTime() / 1000);
+      }
+
+      /**
+       * Indicates that the player has hit an obstacles and the game
+       * needs to end.
+       */
+      function gameOver() {
+        // Stop showing environmental tips
+        stopEnvironmentalTips();
+        
+        // Ensure compactor mode is exited
+        if (compactor.isActive()) {
+          if (!wall_e_front_camera) dash.show();
+          wall_e_speed = compactor.end(composer);
+          
+          // Safely play sounds
+          if (hyper_end && hyper_end.buffer) {
+            hyper_end.play();
+          }
+          if (hyper_during && hyper_during.buffer) {
+            hyper_during.stop();
+          }
+        }
+
+        // Play power-down sound effect instead of explosion
+        // We'll still use the explosion sound but at lower volume
+        // since it's now representing Wall-E powering down
+        if (explosion && explosion.buffer) {
+          explosion.setVolume(0.2);
+          explosion.play();
+        }
+
+        // Indicate the game is over
+        game_over = true;
+        dash.updateStatus("WALL-E POWERED DOWN");
+
+        // Trigger Wall-E's collapse animation
+        wall_e.hit(scene);
+
+        // Switch to overhead camera view
+        if (wall_e_front_camera) switchToOverheadView();
+
+        // Set the button positions depending on camera type
+        if (!wall_e_front_camera) {
+          menu.setButtonsX(camera.position.x);
+        } else {
+          menu.setButtonsX(0);
+        }
+
+        menu.setActive(true);
+        
+        // Show the game over screen with a random environmental fact
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const factElement = document.getElementById('environmental-fact');
+        
+        // Select a random environmental fact
+        const randomFact = environmentalFacts[Math.floor(Math.random() * environmentalFacts.length)];
+        factElement.textContent = "Did you know? " + randomFact;
+        
+        // Show the game over screen
+        gameOverScreen.style.display = 'flex';
+        
+        // Update final score - safely handle this to prevent errors
+        const finalScoreElement = document.getElementById('final-score');
+        if (finalScoreElement) {
+            finalScoreElement.textContent = score;
+        }
+      }
+
+      /**
+       * Initialises the post processing used by the game.
+       */
+      function initialisePostProcessing() {
+        // Add the render to the composer
+        composer.addPass(new RenderPass(scene, camera));
+
+        // Configure bloom pass with settings for dusty atmosphere
+        bloomPass = new UnrealBloomPass(
+          10, 0.5, 0.2, 0.1); // Increased strength to 0.5, lowered threshold to 0.1 for better brightness
+
+        // Initialise the crt shader with a warmer, dustier filter
+        const crtShader = {
+          uniforms: {
+            tDiffuse: { value: null },
+            dustLevel: { value: 0.05 } // Reduced dust from 0.2 to 0.05 for better visibility
+          },
+          vertexShader: `
+            varying vec2 vUv;
+
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * 
+									modelViewMatrix * vec4(position, 1);
+            }
+            `,
+          fragmentShader: `
+            #define SCAN_LINE_DENSITY 1000.0
+
+            varying vec2 vUv; // From vertex shader
+            uniform float dustLevel;
+            uniform sampler2D tDiffuse;
+
+            // Noise function for dust effect
+            float rand(vec2 co) {
+              return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+            }
+
+            void main() {
+                // Minimal curve amounts for less distortion
+                vec2 curve = vec2(0.05, 0.1); 
+
+                // Distances from the center
+                vec2 distances = vec2(abs(0.5 - vUv.x), 
+                    abs(0.5 - vUv.y));
+
+                // Square the distances to smooth the edges
+                distances *= distances;
+
+                // Modifiable vUv
+                vec2 vUv_copy = vec2(vUv.x, vUv.y);
+
+                // Apply minimal curvature
+                vUv_copy.x -= 0.5;
+                vUv_copy.x *= 1.0 + (distances.y * curve.x);
+                vUv_copy.x += 0.5;
+
+                vUv_copy.y -= 0.5;
+                vUv_copy.y *= 1.0 + (distances.x * curve.y);
+                vUv_copy.y += 0.5;
+
+                // Get texture pixel
+                vec4 tex_pixel = texture2D(tDiffuse, 
+                    vec2(vUv_copy.x, vUv_copy.y));
+
+                // Add very subtle scanline - reduced intensity
+                tex_pixel.rgb += 0.005 * sin(vUv_copy.y * SCAN_LINE_DENSITY);
+
+                // Add dust effect - with reduced impact
+                float dust = rand(vUv * 10.0) * dustLevel;
+                tex_pixel.rgb = mix(tex_pixel.rgb, vec3(0.7, 0.6, 0.5), dust * tex_pixel.rgb);
+                
+                // Increase overall brightness
+                tex_pixel.rgb = tex_pixel.rgb * 1.25;
+                
+                // Warm up the colors slightly for WALL-E theme but keep them bright
+                tex_pixel.r = min(tex_pixel.r * 1.1, 1.0);
+                tex_pixel.g = min(tex_pixel.g * 1.02, 1.0);
+                tex_pixel.b = min(tex_pixel.b * 1.0, 1.0);
+
+                // Cut off the corners by setting corners to black 
+                if(vUv_copy.x > 1.0 || vUv_copy.y > 1.0 || 
+                  vUv_copy.x < 0.0 || vUv_copy.y < 0.0)
+                    tex_pixel = vec4(0.0);
+
+                gl_FragColor = tex_pixel;
+              }
+              `,
+        };
+
+        crtPass = new ShaderPass(crtShader);
+      }
+
+       /**
+       * Enables/disables postprocessing effects.
+       */
+       function togglePostProcessing(){
+        compactor.togglePostprocessing();
+        
+        if (postprocessingEnabled){
+          composer.removePass(bloomPass);
+          composer.removePass(crtPass);
+          postprocessingEnabled = false;
+        } else {
+          composer.addPass(bloomPass);
+          composer.addPass(crtPass);
+          postprocessingEnabled = true;
+        }
+      }
+
+      /**
+       * Use GLTFLoader to load meshes for the obejcts used in the game.
+       */
+      function loadMeshes() {
+        const modelLoader = new GLTFLoader();
+        const textureLoader = new THREE.TextureLoader();
+
+        // Generate a unique timestamp for cache busting
+        const timestamp = new Date().getTime();
+        const randomValue = Math.random();
+
+        // Explicitly disable caching for obstacles.js and other critical files
+        fetch('obstacles.js?t=' + timestamp + '&force=true&r=' + randomValue, { cache: 'no-store' })
+          .then(response => response.text())
+          .then(() => console.log('Obstacles.js refreshed'))
+          .catch(err => console.error('Failed to refresh obstacles.js', err));
+          
+        fetch('wall_e.js?t=' + timestamp + '&force=true&r=' + randomValue, { cache: 'no-store' })
+          .then(response => response.text())
+          .then(() => console.log('wall_e.js refreshed'))
+          .catch(err => console.error('Failed to refresh wall_e.js', err));
+
+        // Load the WALL-E mesh instead of wall_e
+        modelLoader.load(
+          `../Assets/Models/wall_e.glb?t=${timestamp}`,
+          function (gltf) {
+            wall_e_mesh = gltf.scene.children[0];
+            wall_e_mesh.scale.set(200, 200, 200);
+            wall_e_mesh.position.y = 500;
+            wall_e_mesh.position.z = 1500;
+            wall_e_mesh.position.x = 200;
+            wall_e_mesh.name = "wall_e_mesh";
+            
+            // Set proper rotation for Wall-E - apply 180 degree Y rotation to fix direction
+            wall_e_mesh.rotation.y = Math.PI; // Rotate 180 degrees around Y axis (facing backward)
+            wall_e_mesh.rotation.x = Math.PI / 2;
+            wall_e_mesh.rotation.z = 0;
+            
+            // Traverse the model to ensure materials are properly applied
+            wall_e_mesh.traverse(function(node) {
+              if (node.isMesh) {
+                // Make Wall-E more visible but not too bright
+                node.material = node.material.clone(); // Clone to avoid shared materials
+                node.material.emissive = new THREE.Color(0x303030); // More subtle glow
+                node.material.emissiveIntensity = 0.3;
+                node.castShadow = true;
+                node.receiveShadow = true;
+              }
+            });
+
+            scene.add(wall_e_mesh);
+          },
+          undefined,
+          function (error) {
+            console.error("Error loading WALL-E model:", error);
+          }
+        );
+
+        // Load the AUTO mesh instead of asteroid
+        modelLoader.load(
+          `/Assets/Models/auto.glb?t=${timestamp}&unique=${Math.random()}`,
+          function (gltf) {
+            asteroid_mesh = gltf.scene.children[0];
+            var scale = 150;
+            asteroid_mesh.scale.set(scale, scale, scale);
+            asteroid_mesh.name = "AUTO"; // Rename to "AUTO" so our collision detection recognizes it
+            
+            // Set initial rotation to face the player
+            asteroid_mesh.rotation.y = Math.PI;
+            asteroid_mesh.rotation.x = 0;
+            asteroid_mesh.rotation.z = 0;
+            
+            // Traverse the model to ensure materials are properly applied
+            asteroid_mesh.traverse(function(node) {
+              if (node.isMesh) {
+                // Make AUTO visible with a moderate red glow
+                node.material = node.material.clone(); // Clone to avoid shared materials
+                node.material.emissive = new THREE.Color(0x330000); // Reduced red glow
+                node.material.emissiveIntensity = 0.5;
+                node.name = "AUTO_part"; // Also name each mesh part for collision detection
+              }
+            });
+            
+            console.log("AUTO model loaded successfully with timestamp: " + timestamp);
+          },
+          undefined,
+          function (error) {
+            console.error("Error loading AUTO model:", error);
+          }
+        );
+
+        // Load the plant boot as a power-up
+        modelLoader.load(
+          `/Assets/Models/plant_boot.glb?t=${timestamp}`,
+          function (gltf) {
+            plant_boot_mesh = gltf.scene.children[0];
+            var scale = 150;
+            plant_boot_mesh.scale.set(scale, scale, scale);
+            plant_boot_mesh.name = "Plant Boot";
+            
+            // Set the proper rotation for the plant boot to match Wall-E
+            plant_boot_mesh.rotation.x = Math.PI / 2; // 90 degrees around X-axis
+            plant_boot_mesh.rotation.y = Math.PI; // 180 degrees around Y-axis to face backward
+            
+            // Traverse to set proper materials
+            plant_boot_mesh.traverse(function(node) {
+              if (node.isMesh) {
+                node.material.metalness = 0.1;
+                node.material.roughness = 0.8;
+                // Set a green color for the plant boot
+                if (!node.material.map) {
+                  node.material.color.set(0x2e8b57); // Sea green color
+                }
+              }
+            });
+            
+            // Add to global scope for use in game
+            window.plant_boot_mesh = plant_boot_mesh;
+          },
+          undefined,
+          function (error) {
+            console.error("Error loading plant boot model:", error);
+          }
+        );
+
+        // Load the recyclable materials (metal and plastic) as collectibles - make metal 75% bigger
+        modelLoader.load(
+          `/Assets/Models/metal.glb?t=${timestamp}`,
+          function (gltf) {
+            metal_mesh = gltf.scene.children[0];
+            // Increase metal size by 75%
+            var scale = 175; // 100 * 1.75 = 175 (75% larger)
+            metal_mesh.scale.set(scale, scale, scale);
+            metal_mesh.name = "Metal";
+            
+            // Traverse to set proper materials
+            metal_mesh.traverse(function(node) {
+              if (node.isMesh) {
+                node.material.metalness = 0.8;
+                node.material.roughness = 0.2;
+                // Set silver color if no texture
+                if (!node.material.map) {
+                  node.material.color.set(0xc0c0c0);
+                }
+              }
+            });
+            
+            // Add to global scope for use in game
+            window.metal_mesh = metal_mesh;
+          },
+          undefined,
+          function (error) {
+            console.error("Error loading metal model:", error);
+          }
+        );
+
+        modelLoader.load(
+          `/Assets/Models/plastic.glb?t=${timestamp}`,
+          function (gltf) {
+            plastic_mesh = gltf.scene.children[0];
+            var scale = 100;
+            plastic_mesh.scale.set(scale, scale, scale);
+            plastic_mesh.name = "Plastic";
+            
+            // Traverse to set proper materials
+            plastic_mesh.traverse(function(node) {
+              if (node.isMesh) {
+                node.material.metalness = 0.3;
+                node.material.roughness = 0.5;
+                // Set blue color if no texture
+                if (!node.material.map) {
+                  node.material.color.set(0x1e90ff);
+                }
+              }
+            });
+            
+            // Add to global scope for use in game
+            window.plastic_mesh = plastic_mesh;
+          },
+          undefined,
+          function (error) {
+            console.error("Error loading plastic model:", error);
+          }
+        );
+      }
+
+      // Function to force a full reload and clear cache
+      function forceReload() {
+        // This adds a unique parameter to the URL to force a reload
+        const timestamp = new Date().getTime();
+        const randomValue = Math.random().toString(36).substring(2, 15);
+        
+        // Create a special fetch request to force reload dash.js without caching
+        // But don't try to execute it - just force the browser to download a fresh copy
+        fetch('./dash.js?t=' + timestamp + '&nocache=' + randomValue, { 
+          cache: 'no-store',
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache'
+          },
+          method: 'HEAD' // Just get headers, don't try to execute the content
+        })
+        .then(() => {
+          console.log('dash.js refresh requested');
+          // Then reload the entire page with cache busting
+          const currentUrl = window.location.href.split('?')[0]; // Get base URL without parameters
+          window.location.href = `${currentUrl}?nocache=${timestamp}-${randomValue}&force=true&random=${Math.random()}`;
+        })
+        .catch(err => {
+          console.error('Error requesting dash.js refresh:', err);
+          // Reload anyway
+          const currentUrl = window.location.href.split('?')[0];
+          window.location.href = `${currentUrl}?nocache=${timestamp}-${randomValue}&force=true&random=${Math.random()}`;
+        });
+      }
+
+      // Remove the force-reload button from the body
+      document.addEventListener('DOMContentLoaded', function() {
+        // Remove the "Force Reload" button since it can cause issues and confusion
+        const reloadButton = document.getElementById('force-reload');
+        if (reloadButton) {
+          reloadButton.parentNode.removeChild(reloadButton);
+        }
+      });
+
+      /**
+       * Creates particle effects when items are collected
+       */
+      function createCollectionParticles(scene, position, type, count) {
+        // Create particle group
+        const particleGeometry = new THREE.BufferGeometry();
+        const particleVelocities = [];
+        const particlePositions = [];
+        
+        // Choose color based on type
+        const color = particleColors[type] || new THREE.Color(0xffffff);
+        
+        // Create particles
+        for (let i = 0; i < count; i++) {
+          // Random position within a small radius of the item
+          const x = position.x + (Math.random() - 0.5) * 100;
+          const y = position.y + (Math.random() - 0.5) * 100;
+          const z = position.z + (Math.random() - 0.5) * 100;
+          
+          // Random velocity
+          const vx = (Math.random() - 0.5) * 20;
+          const vy = (Math.random() * 10) + 5; // Mostly upward
+          const vz = (Math.random() - 0.5) * 20;
+          
+          particlePositions.push(x, y, z);
+          particleVelocities.push(vx, vy, vz);
+        }
+        
+        // Create particle geometry
+        particleGeometry.setAttribute(
+          'position', 
+          new THREE.Float32BufferAttribute(particlePositions, 3)
+        );
+        
+        // Create particle material
+        const particleMaterial = new THREE.PointsMaterial({
+            color: color,
+          size: 5,
+          blending: THREE.AdditiveBlending,
+            transparent: true,
+            opacity: 0.8
+          });
+          
+        // Create the particle system
+        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particleSystem);
+        
+        // Store particle system with its velocities for animation
+        particles.push({
+          system: particleSystem,
+          velocities: particleVelocities,
+          life: 2.0, // 2 second lifespan
+          decay: 0.02 // How quickly particles fade
+        });
+        
+        // Also show an environmental fact if collecting metal or plastic
+        if (type === "Metal" || type === "Plastic") {
+          showRandomEnvironmentalFact(type.toLowerCase());
+        }
+      }
+      
+      /**
+       * Updates the particles for animation
+       */
+      function updateParticles(delta) {
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const particle = particles[i];
+          
+          // Update life
+          particle.life -= delta;
+          
+          // Remove dead particles
+          if (particle.life <= 0) {
+            scene.remove(particle.system);
+            particles.splice(i, 1);
+            continue;
+          }
+          
+          // Update opacity based on life
+          particle.system.material.opacity = particle.life * 0.5;
+          
+          // Update positions
+          const positions = particle.system.geometry.attributes.position.array;
+          
+          for (let j = 0; j < positions.length; j += 3) {
+            const velocityIndex = j;
+            
+            // Apply velocity
+            positions[j] += particle.velocities[velocityIndex] * delta * 60;
+            positions[j + 1] += particle.velocities[velocityIndex + 1] * delta * 60;
+            positions[j + 2] += particle.velocities[velocityIndex + 2] * delta * 60;
+            
+            // Apply gravity
+            particle.velocities[velocityIndex + 1] -= 0.1 * delta * 60;
+          }
+          
+          // Mark attribute for update
+          particle.system.geometry.attributes.position.needsUpdate = true;
+        }
+      }
+      
+      /**
+       * Show an environmental fact related to the collected material
+       */
+      function showRandomEnvironmentalFact(materialType) {
+        // Get a subset of facts relevant to the material type
+        let relevantFacts = environmentalFacts.filter(fact => {
+          const lowercaseFact = fact.toLowerCase();
+          return lowercaseFact.includes(materialType) || 
+                 (materialType === "metal" && lowercaseFact.includes("aluminum")) ||
+                 (materialType === "plastic" && lowercaseFact.includes("bottle"));
+        });
+        
+        // If we don't have any specifically relevant facts, use any fact
+        if (relevantFacts.length === 0) {
+          relevantFacts = environmentalFacts;
+        }
+        
+        // Choose a random fact
+        const randomFact = relevantFacts[Math.floor(Math.random() * relevantFacts.length)];
+        
+        // Create or update the fact display
+        let factDisplay = document.getElementById("fact-popup");
+        if (!factDisplay) {
+          factDisplay = document.createElement("div");
+          factDisplay.id = "fact-popup";
+          factDisplay.style.position = "fixed";
+          factDisplay.style.top = "20px";
+          factDisplay.style.right = "20px";
+          factDisplay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+          factDisplay.style.color = "#4CAF50";
+          factDisplay.style.padding = "15px 20px";
+          factDisplay.style.borderRadius = "10px";
+          factDisplay.style.maxWidth = "350px";
+          factDisplay.style.textAlign = "left";
+          factDisplay.style.zIndex = "1000";
+          factDisplay.style.fontFamily = "digital_font, Arial, sans-serif";
+          factDisplay.style.fontSize = "16px";
+          factDisplay.style.border = "2px solid #4CAF50";
+          factDisplay.style.boxShadow = "0 0 20px rgba(76, 175, 80, 0.5)";
+          
+          // Add a heading
+          const heading = document.createElement("div");
+          heading.textContent = "ECO FACT";
+          heading.style.color = "#FFFFFF";
+          heading.style.fontSize = "18px";
+          heading.style.fontWeight = "bold";
+          heading.style.marginBottom = "8px";
+          heading.style.textShadow = "0 0 10px rgba(255, 255, 255, 0.5)";
+          factDisplay.appendChild(heading);
+          
+          // Add content container
+          const content = document.createElement("div");
+          content.id = "fact-content";
+          factDisplay.appendChild(content);
+          
+          document.body.appendChild(factDisplay);
+        }
+        
+        // Update the content
+        document.getElementById("fact-content").textContent = randomFact;
+        factDisplay.style.opacity = "0";
+        factDisplay.style.display = "block";
+        
+        // Animate in
+        setTimeout(() => {
+          factDisplay.style.transition = "opacity 0.5s";
+          factDisplay.style.opacity = "1";
+        }, 100);
+        
+        // Animate out after 5 seconds
+        setTimeout(() => {
+          factDisplay.style.opacity = "0";
+          setTimeout(() => {
+            factDisplay.style.display = "none";
+          }, 500);
+        }, 5000);
+      }
+
+      /**
+       * Initialize the intro sequence and start the game
+       */
+      function initIntroSequence() {
+        // Show intro screen immediately but with opacity 0
+        const introScreen = document.getElementById('intro-screen');
+        const introLogo = document.getElementById('intro-logo');
+        
+        // Make sure the image is loaded before starting the animation
+        introLogo.onload = function() {
+          // Start fade in after a short delay to ensure everything is ready
+          setTimeout(() => {
+            introScreen.style.opacity = '1';
+            
+            // After 3 seconds, fade out the intro screen
+            setTimeout(() => {
+              introScreen.style.opacity = '0';
+              
+              // When fade out completes, show the start screen
+              setTimeout(() => {
+                introScreen.style.display = 'none';
+                document.getElementById('start-screen').style.display = 'flex';
+              }, 1500);
+            }, 3000);
+          }, 500);
+        };
+        
+        // Fallback in case the image is already loaded or fails to load
+        if (introLogo.complete) {
+          setTimeout(() => {
+            introScreen.style.opacity = '1';
+            
+            // After 3 seconds, fade out the intro screen
+            setTimeout(() => {
+              introScreen.style.opacity = '0';
+              
+              // When fade out completes, show the start screen
+              setTimeout(() => {
+                introScreen.style.display = 'none';
+                document.getElementById('start-screen').style.display = 'flex';
+              }, 1500);
+            }, 3000);
+          }, 500);
+        }
+      }
+
+      /**
+       * Start the game when the start button is clicked
+       */
+      function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        gameStarted = true;
+        
+        // Start showing environmental tips
+        startEnvironmentalTips();
+        
+        // Reset the game state
+        menu.setActive(false);
+        last_time = Math.round(new Date().getTime() / 1000);
+        compactor.clearCharge();
+        
+        // If the game was over, restart it
+        if (game_over) reset();
+        
+        // Show instructions overlay briefly when game starts
+        const instructionsOverlay = document.getElementById('instructions-overlay');
+        instructionsOverlay.style.display = 'block';
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+          instructionsOverlay.style.display = 'none';
+        }, 5000);
+        
+        // Set initial status message
+        dash.updateStatus("COLLECT RECYCLABLES TO SAVE EARTH!");
+        dash.status_text.style.color = "#4CAF50"; // Green
+        dash.status_text.style.textShadow = "0 0 10px rgba(76,175,80,0.7)"; // Green glow
+        
+        // Clear status after 3 seconds
+        setTimeout(() => {
+          dash.updateStatus(""); 
+          dash.status_text.style.color = "gray";
+          dash.status_text.style.textShadow = "none";
+        }, 3000);
+      }
+      
+      /**
+       * Restart the game when the restart button is clicked
+       */
+      function restartGame() {
+        document.getElementById('game-over-screen').style.display = 'none';
+        
+        // Reset the game state
+        menu.setActive(false);
+        last_time = Math.round(new Date().getTime() / 1000);
+        compactor.clearCharge();
+        
+        // Reset the game
+        reset();
+        
+        // Start showing environmental tips again
+        startEnvironmentalTips();
+        
+        // Set initial status message
+        dash.updateStatus("COLLECT RECYCLABLES TO SAVE EARTH!");
+        dash.status_text.style.color = "#4CAF50"; // Green
+        dash.status_text.style.textShadow = "0 0 10px rgba(76,175,80,0.7)"; // Green glow
+        
+        // Clear status after 3 seconds
+        setTimeout(() => {
+          dash.updateStatus(""); 
+          dash.status_text.style.color = "gray";
+          dash.status_text.style.textShadow = "none";
+        }, 3000);
+      }
+      
+      /**
+       * Start showing environmental tips at regular intervals
+       */
+      function startEnvironmentalTips() {
+        // Clear any existing interval
+        if (tipInterval) {
+          clearInterval(tipInterval);
+        }
+        
+        // Reset current tip index
+        currentTip = 0;
+        
+        // Create a tip display element if it doesn't exist
+        let tipDisplay = document.getElementById('tip-display');
+        if (!tipDisplay) {
+          tipDisplay = document.createElement('div');
+          tipDisplay.id = 'tip-display';
+          tipDisplay.style.position = 'absolute';
+          tipDisplay.style.bottom = '20px';
+          tipDisplay.style.left = '20px';
+          tipDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+          tipDisplay.style.color = '#4CAF50';
+          tipDisplay.style.padding = '10px 15px';
+          tipDisplay.style.borderRadius = '10px';
+          tipDisplay.style.fontFamily = 'digital_font, Arial, sans-serif';
+          tipDisplay.style.fontSize = '16px';
+          tipDisplay.style.maxWidth = '400px';
+          tipDisplay.style.zIndex = '1000';
+          tipDisplay.style.opacity = '0';
+          tipDisplay.style.transition = 'opacity 1s ease-in-out';
+          tipDisplay.style.textShadow = '0 0 5px rgba(76, 175, 80, 0.5)';
+          tipDisplay.style.boxShadow = '0 0 10px rgba(76, 175, 80, 0.5)';
+          tipDisplay.style.border = '2px solid #4CAF50';
+          
+          // Add a heading
+          const heading = document.createElement("div");
+          heading.textContent = "ECO TIP";
+          heading.style.color = "#FFFFFF";
+          heading.style.fontSize = "18px";
+          heading.style.fontWeight = "bold";
+          heading.style.marginBottom = "8px";
+          heading.style.textShadow = "0 0 10px rgba(255, 255, 255, 0.5)";
+          tipDisplay.appendChild(heading);
+          
+          // Add content container
+          const content = document.createElement("div");
+          content.id = "tip-content";
+          tipDisplay.appendChild(content);
+          
+          document.body.appendChild(tipDisplay);
+        }
+        
+        // Function to show a tip
+        function showTip() {
+          // Don't show tips if game is paused or over
+          if (menu.isPaused() || game_over) {
+            return;
+          }
+          
+          document.getElementById("tip-content").textContent = environmentalTips[currentTip];
+          tipDisplay.style.opacity = '1';
+          
+          // Move to next tip
+          currentTip = (currentTip + 1) % environmentalTips.length;
+          
+          // Hide tip after 5 seconds
+          setTimeout(() => {
+            tipDisplay.style.opacity = '0';
+          }, 5000);
+        }
+        
+        // Show first tip after 5 seconds of gameplay (reduced from 10)
+        setTimeout(showTip, 5000);
+        
+        // Show a tip every 15 seconds (increased frequency from 30)
+        tipInterval = setInterval(showTip, 15000);
+      }
+      
+      /**
+       * Stop showing environmental tips
+       */
+      function stopEnvironmentalTips() {
+        if (tipInterval) {
+          clearInterval(tipInterval);
+          tipInterval = null;
+        }
+        
+        // Hide tip display if it exists
+        const tipDisplay = document.getElementById('tip-display');
+        if (tipDisplay) {
+          tipDisplay.style.opacity = '0';
+        }
+      }
+
+      // Setup the intro sequence when the document is loaded
+      document.addEventListener('DOMContentLoaded', function() {
+        // Initialize intro sequence
+        initIntroSequence();
+        
+        // Only set up listeners here, not in init()
+        document.getElementById('start-button').addEventListener('click', startGame);
+        document.getElementById('restart-button').addEventListener('click', restartGame);
+        
+        // Initialize the game
+        init();
+        animate();
+      });
+    </script>
+  </body>
+</html>
