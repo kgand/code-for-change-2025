@@ -48,6 +48,7 @@
                 <div><span class="control-key">←</span> <span class="control-key">→</span> Move left/right</div>
                 <div><span class="control-key">↑</span> <span class="control-key">Space</span> Jump</div>
                 <div><span class="control-key">P</span> <span class="control-key">Esc</span> Pause game</div>
+                <div><span class="control-key">M</span> Toggle mute</div>
             </div>
         </div>
         <div id="game-play" class="game-screen hidden">
@@ -55,7 +56,10 @@
                 <div id="score">Score: 0</div>
                 <div id="waste-collected">Waste Collected: 0</div>
             </div>
-            <button id="pause-button" class="icon-button" aria-label="Pause Game">⏸️</button>
+            <div id="game-controls">
+                <button id="pause-button" class="icon-button" aria-label="Pause Game">⏸️</button>
+                <button id="mute-button" class="icon-button" aria-label="Toggle Mute">🔊</button>
+            </div>
             <canvas id="game-canvas"></canvas>
         </div>
         <div id="game-paused" class="game-screen hidden">
@@ -64,6 +68,10 @@
             <div class="fact-container">
                 <h3>Environmental Fact</h3>
                 <p id="pause-screen-fact" class="environmental-fact"></p>
+            </div>
+            <div class="sound-controls">
+                <button id="music-button" class="control-button">Music Off</button>
+                <button id="sound-effects-button" class="control-button">Sound Effects Off</button>
             </div>
             <button id="resume-button">Resume Game</button>
             <button id="restart-from-pause-button" class="secondary-button">Restart</button>
@@ -81,6 +89,7 @@
     </div>
     
     <script src="solution/js/environmental-facts.js"></script>
+    <script src="solution/js/sound-manager.js"></script>
     <script src="solution/js/game.js"></script>
 </body>
 </html> 

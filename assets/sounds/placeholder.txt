@@ -1,0 +1,16 @@
+# Sound File Placeholders
+
+The following sound files need to be added to this directory:
+
+- jump.mp3
+- collect.mp3
+- crash.mp3
+- game-over.mp3
+- background-music.mp3
+
+Note: These files should be properly licensed for use in the game. Consider using royalty-free sound effects from sources like:
+- Freesound.org
+- OpenGameArt.org
+- ZapSplat.com
+
+When adding the actual sound files, delete this placeholder file. 
