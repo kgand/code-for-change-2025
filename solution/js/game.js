@@ -3,9 +3,13 @@
 // Game elements
 const gameStartScreen = document.getElementById('game-start');
 const gamePlayScreen = document.getElementById('game-play');
+const gamePausedScreen = document.getElementById('game-paused');
 const gameOverScreen = document.getElementById('game-over');
 const startButton = document.getElementById('start-button');
+const pauseButton = document.getElementById('pause-button');
+const resumeButton = document.getElementById('resume-button');
 const restartButton = document.getElementById('restart-button');
+const restartFromPauseButton = document.getElementById('restart-from-pause-button');
 const scoreElement = document.getElementById('score');
 const wasteCollectedElement = document.getElementById('waste-collected');
 const finalScoreElement = document.getElementById('final-score');
@@ -15,6 +19,7 @@ const ctx = canvas.getContext('2d');
 
 // Game state
 let gameActive = false;
+let gamePaused = false;
 let score = 0;
 let wasteCollected = 0;
 let animationFrameId;
@@ -76,10 +81,33 @@ function init() {
 function startGame() {
     gameStartScreen.classList.add('hidden');
     gamePlayScreen.classList.remove('hidden');
+    gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
     
     init();
     gameActive = true;
+    gamePaused = false;
+    lastTime = performance.now();
+    animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+// Pause the game
+function pauseGame() {
+    if (!gameActive || gamePaused) return;
+    
+    gamePaused = true;
+    cancelAnimationFrame(animationFrameId);
+    gamePlayScreen.classList.add('hidden');
+    gamePausedScreen.classList.remove('hidden');
+}
+
+// Resume the game
+function resumeGame() {
+    if (!gameActive || !gamePaused) return;
+    
+    gamePaused = false;
+    gamePlayScreen.classList.remove('hidden');
+    gamePausedScreen.classList.add('hidden');
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
 }
@@ -102,7 +130,7 @@ function gameLoop(timestamp) {
     drawGame();
     
     // Continue the loop if game is active
-    if (gameActive) {
+    if (gameActive && !gamePaused) {
         animationFrameId = requestAnimationFrame(gameLoop);
     }
 }
@@ -479,22 +507,36 @@ function updateWasteCollected() {
 // Game over
 function gameOver() {
     gameActive = false;
+    gamePaused = false;
     cancelAnimationFrame(animationFrameId);
     
     finalScoreElement.textContent = `Score: ${score}`;
     finalWasteElement.textContent = `Waste Collected: ${wasteCollected}`;
     
     gamePlayScreen.classList.add('hidden');
+    gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.remove('hidden');
 }
 
 // Event listeners
 startButton.addEventListener('click', startGame);
+pauseButton.addEventListener('click', pauseGame);
+resumeButton.addEventListener('click', resumeGame);
 restartButton.addEventListener('click', startGame);
+restartFromPauseButton.addEventListener('click', startGame);
 
 // Keyboard controls
 document.addEventListener('keydown', (event) => {
-    if (!gameActive) return;
+    if (event.key === 'p' || event.key === 'P' || event.key === 'Escape') {
+        if (gameActive && !gamePaused) {
+            pauseGame();
+        } else if (gameActive && gamePaused) {
+            resumeGame();
+        }
+        return;
+    }
+    
+    if (!gameActive || gamePaused) return;
     
     switch (event.key) {
         case 'ArrowLeft':
@@ -526,5 +568,6 @@ window.addEventListener('load', () => {
     // Show the start screen
     gameStartScreen.classList.remove('hidden');
     gamePlayScreen.classList.add('hidden');
+    gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
 }); 

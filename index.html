@@ -17,6 +17,7 @@
             <div class="controls-info">
                 <div><span class="control-key">←</span> <span class="control-key">→</span> Move left/right</div>
                 <div><span class="control-key">↑</span> <span class="control-key">Space</span> Jump</div>
+                <div><span class="control-key">P</span> <span class="control-key">Esc</span> Pause game</div>
             </div>
         </div>
         <div id="game-play" class="game-screen hidden">
@@ -24,7 +25,14 @@
                 <div id="score">Score: 0</div>
                 <div id="waste-collected">Waste Collected: 0</div>
             </div>
+            <button id="pause-button" class="icon-button" aria-label="Pause Game">⏸️</button>
             <canvas id="game-canvas"></canvas>
+        </div>
+        <div id="game-paused" class="game-screen hidden">
+            <h1>Game Paused</h1>
+            <p>Take a break and think about the environment!</p>
+            <button id="resume-button">Resume Game</button>
+            <button id="restart-from-pause-button" class="secondary-button">Restart</button>
         </div>
         <div id="game-over" class="game-screen hidden">
             <h1>Game Over</h1>
