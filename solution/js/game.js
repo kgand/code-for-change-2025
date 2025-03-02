@@ -45,6 +45,8 @@ let wasteSortingGame = null; // Will hold WasteSortingGame instance
 let wasteSortingThreshold = 10; // Trigger mini-game after collecting this many waste items
 let wasteSortingEnabled = true; // Flag to enable/disable mini-game
 let inMiniGame = false; // Flag to track if mini-game is active
+let lastObstacleTime = 0; // Last time an obstacle was generated
+let lastCollectibleTime = 0; // Last time a collectible was generated
 
 // Difficulty settings
 const difficultySettings = {
@@ -339,9 +341,22 @@ function updateGame(deltaTime) {
     // Update player
     updatePlayer(deltaTime);
     
-    // Generate obstacles and collectibles
-    generateObstacles();
-    generateCollectibles();
+    // Generate obstacles and collectibles with throttling
+    const currentTime = performance.now();
+    
+    if (currentTime - lastObstacleTime > 1000 / settings.obstacleFrequency / 50) {
+        if (Math.random() < settings.obstacleFrequency) {
+            generateObstacle();
+        }
+        lastObstacleTime = currentTime;
+    }
+    
+    if (currentTime - lastCollectibleTime > 1000 / settings.collectibleFrequency / 50) {
+        if (Math.random() < settings.collectibleFrequency) {
+            generateCollectible();
+        }
+        lastCollectibleTime = currentTime;
+    }
     
     // Update obstacles
     updateObstacles(deltaTime);
@@ -392,38 +407,34 @@ function updatePlayer(deltaTime) {
     player.eyeHeight = -20 + Math.sin(animationTime / 300) * 3;
 }
 
-// Generate obstacles
-function generateObstacles() {
-    if (Math.random() < settings.obstacleFrequency) {
-        const lane = Math.floor(Math.random() * settings.lanes);
-        
-        obstacles.push({
-            x: (lane * settings.laneWidth) - (settings.laneWidth / 2),
-            y: -50,
-            width: 50,
-            height: 50,
-            lane: lane,
-            type: Math.floor(Math.random() * 3) // Different obstacle types
-        });
-    }
+// Generate obstacle (renamed from generateObstacles)
+function generateObstacle() {
+    const lane = Math.floor(Math.random() * settings.lanes);
+    
+    obstacles.push({
+        x: (lane * settings.laneWidth) - (settings.laneWidth / 2),
+        y: -50,
+        width: 50,
+        height: 50,
+        lane: lane,
+        type: Math.floor(Math.random() * 3) // Different obstacle types
+    });
 }
 
-// Generate collectibles
-function generateCollectibles() {
-    if (Math.random() < settings.collectibleFrequency) {
-        const lane = Math.floor(Math.random() * settings.lanes);
-        
-        collectibles.push({
-            x: (lane * settings.laneWidth) - (settings.laneWidth / 2),
-            y: -30,
-            width: 30,
-            height: 30,
-            lane: lane,
-            type: Math.floor(Math.random() * 3), // 0: plastic, 1: paper, 2: metal
-            rotation: 0,
-            rotationSpeed: (Math.random() - 0.5) * 0.2
-        });
-    }
+// Generate collectible (renamed from generateCollectibles)
+function generateCollectible() {
+    const lane = Math.floor(Math.random() * settings.lanes);
+    
+    collectibles.push({
+        x: (lane * settings.laneWidth) - (settings.laneWidth / 2),
+        y: -30,
+        width: 30,
+        height: 30,
+        lane: lane,
+        type: Math.floor(Math.random() * 3), // 0: plastic, 1: paper, 2: metal
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.2
+    });
 }
 
 // Update obstacles
