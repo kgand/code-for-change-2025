@@ -7,11 +7,12 @@ export default function Dash() {
   this.last_hyper = 0;
 
   /**
-   * Resets the position of the HTML text on screen so that is matches
-   * with its position on the dashboard texture.
+   * Creates and positions the game HUD elements and dashboard display
+   * Handles responsive positioning for different screen sizes
+   * @param {THREE.Scene} scene - The scene to add the dashboard to
    */
   this.initialise = function (scene) {
-    // Initialise speed text - moved more to the left
+    // Speed display - positioned on left side of dashboard
     this.speed_text = document.createElement("div");
     this.speed_text.style.position = "absolute";
     this.speed_text.style.fontSize =
@@ -21,10 +22,10 @@ export default function Dash() {
       ) + "px";
     this.speed_text.style.top = 0.877 * window.innerHeight + "px";
     this.speed_text.style.left =
-      window.innerWidth / 5 - 2.2 * window.innerHeight + "px"; // Moved even further to the left
+      window.innerWidth / 5 - 2.2 * window.innerHeight + "px"; // Left-aligned position
     this.speed_text.style.color = "gray";
 
-    // Initialise score text
+    // Score display - positioned on right side of dashboard
     this.score_text = document.createElement("div");
     this.score_text.style.position = "absolute";
     this.score_text.style.fontSize =
@@ -37,7 +38,7 @@ export default function Dash() {
       window.innerWidth / 2 - 0.175 * window.innerHeight + "px";
     this.score_text.style.color = "gray";
 
-    // Initialise status text
+    // Status indicator - positioned at bottom center of dashboard
     this.status_text = document.createElement("div");
     this.status_text.style.position = "absolute";
     this.status_text.style.fontSize =
@@ -50,12 +51,12 @@ export default function Dash() {
       window.innerWidth / 2 - 0.08 * window.innerHeight + "px";
     this.status_text.style.color = "gray";
 
-    // Add to page
+    // Add text elements to the DOM
     document.body.appendChild(this.score_text);
     document.body.appendChild(this.speed_text);
     document.body.appendChild(this.status_text);
 
-    // Initialise the dash texture
+    // Create the dashboard background with semi-transparent material
     var texture = new THREE.TextureLoader().load(
       "../Assets/Images/dash.png"
     );
@@ -70,12 +71,15 @@ export default function Dash() {
     this.dash.position.z = -1600;
     this.dash.name = "Dash";
 
-    // Add all to the scene
+    // Add dashboard to scene
     scene.add(this.dash);
   };
 
   /**
-   * Updates the components of the dash.
+   * Updates dashboard displays with current game values
+   * @param {number} carSpeed - Current player speed
+   * @param {number} score - Current game score
+   * @param {number} xPosition - Current x position for dashboard alignment
    */
   this.update = function (
     carSpeed,
@@ -84,13 +88,13 @@ export default function Dash() {
   ) {
     this.dash.position.x = xPosition;
 
-    // Set speed and score text
+    // Update speed and score displays with current values
     this.speed_text.innerHTML = Math.round(carSpeed);
     this.score_text.innerHTML = Math.round(score);
   };
 
   /**
-   * Shows the dashboard when called.
+   * Makes dashboard visible and enables all display elements
    */
   this.show = function () {
     this.dash.visible = true;

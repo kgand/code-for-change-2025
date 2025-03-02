@@ -6,17 +6,17 @@ export default function WallE() {
 	this.wallE_speed = 1;
 	this.wallE_speed_cap = 300;
 	this.initial_max_speed = 75;
-	this.game_start_time = Date.now(); // Track when the game started
-	this.speed_increase_factor = 0.02; // How much to increase speed over time
+	this.game_start_time = Date.now(); // Track game start timestamp for difficulty progression
+	this.speed_increase_factor = 0.02; // Speed multiplier for gradual difficulty increase
 
-	// For floor planes
+	// Hitbox for collision detection with floor
 	this.wallE_hitbox;
 
-	// For wallE animation
+	// Animation parameters for Wall-E's movement
 	this.sin_z = 0.0;
 	this.sin_y = 0.0;
 
-	// For lane change animation
+	// Lane management variables
 	this.lane_sep = 1000;
 	this.double = false;
 
@@ -29,7 +29,7 @@ export default function WallE() {
 	this.move_iters = 0;
 	this.flip_iters = 0;
 
-	// For height change animation
+	// Vertical movement variables
 	this.height_sep = 1000;
 
 	this.wallE_height_offset = 0;
@@ -58,12 +58,13 @@ export default function WallE() {
 	this.game_over_speed;
 
 	/**
-	 * Initialises the textures and raycaster/mouse used by the menu.
+	 * Initializes Wall-E character model, hitbox, and particle effects
+	 * @param {THREE.Scene} scene - The scene to add Wall-E to
 	 */
 	this.initialise = function (scene) {
 		this.initialiseRearParticles(scene);
 
-		// Initialise the wallE hitbox - make it significantly larger to improve collision detection
+		// Create invisible hitbox for collision detection - sized larger for better gameplay
 		var cubeGeometry = new THREE.BoxGeometry(450, 350, 800);
 		var wireMaterial = new THREE.MeshBasicMaterial({
 			color: 0xff0000,
@@ -77,23 +78,24 @@ export default function WallE() {
 	};
 
 	/**
-	 * @returns Vertical lane seperation.
+	 * Returns the vertical distance between lanes
+	 * @returns {number} Height separation value
 	 */
 	this.getHeightSep = function () {
 		return this.height_sep;
 	};
 
 	/**
-	 * Get lane change flag..
-	 * @returns Indicates if wallE is currently changing lane.
+	 * Checks if Wall-E is currently changing horizontal lanes
+	 * @returns {boolean} True if changing lanes, false otherwise
 	 */
 	this.isChangingLane = function () {
 		return this.lane_change;
 	};
 
 	/**
-	 * Get height change flag.
-	 * @returns Indicates if wallE is currently changing height.
+	 * Checks if Wall-E is currently changing vertical position
+	 * @returns {boolean} True if changing height, false otherwise
 	 */
 	this.isChangingHeight = function () {
 		return this.height_change;

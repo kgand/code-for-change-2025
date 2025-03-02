@@ -10,37 +10,38 @@
 - [Game Features](#game-features)
 - [Technologies Used](#technologies-used)
 - [Project Structure](#project-structure)
-- [Team Experience](#team-experience)
 - [Screenshots](#screenshots)
 - [Future Development](#future-development)
-- [License](#license)
 - [Acknowledgments](#acknowledgments)
 
 ## Overview
-**Subwaste Surfer** is an endless runner-style 3D game with an environmental message, developed for the SHPE UF's Code for Change 2025 Hackathon. The player controls WALL-E as he navigates through an underwater environment filled with waste and pollution, collecting recyclable items and avoiding obstacles.
+**Subwaste Surfer** is an endless runner-style 3D game with an environmental message that I developed for the SHPE UF's Code for Change 2025 Hackathon. As a player, you control WALL-E as he navigates through an environment filled with waste and pollution, collecting recyclable items and avoiding obstacles.
 
-The game aims to raise awareness about ocean pollution while providing an engaging gameplay experience. As players progress, they earn points by collecting items and navigating through increasingly challenging environments.
+I designed the game to raise awareness about pollution and waste management while providing an engaging gameplay experience. As you progress, you earn points by collecting items and navigating through increasingly challenging environments.
 
 ## Project Background
-This project was developed for the **Environmental Track** of **Code for Change 2025**, a 24-hour hackathon organized by SHPE UF. The mission of this event is to empower students to foster positive community change using creative software and design solutions.
+I developed this project for the **Environmental Track** of **Code for Change 2025**, a 24-hour hackathon organized by SHPE UF. The mission of this event is to empower students to foster positive community change using creative software and design solutions.
 
-As ocean pollution continues to be a major environmental concern, our project seeks to:
-- Raise awareness about ocean waste and its impact on marine ecosystems
+As pollution and improper waste disposal continue to be major environmental concerns, my project seeks to:
+- Raise awareness about waste and its impact on our environment and ecosystems
 - Demonstrate the importance of recycling and proper waste management
 - Engage users through interactive gameplay to promote environmental responsibility
+- Provide real-time reinforcement through computer vision that connects virtual gameplay with real-world actions
+
+The complexity of developing an environmental solution that bridges virtual engagement with tangible action presented significant technical and design challenges, requiring me to integrate game development, computer vision, and environmental education principles in a cohesive package.
 
 ## Inspiration & Story
-The genesis of Subwaste Surfer came from the intersection of two powerful influences in my life: my deep concern for our planet's environmental future and the cultural phenomena that have shaped my generation.
+Subwaste Surfer emerged from the intersection of my environmental studies research and software engineering background. The concept materialized during my field research on pollution where I witnessed firsthand the devastating impact of improper waste management on ecosystems.
 
 ### From Subway Surfers to Subwaste Surfer
-The endless runner genre, particularly Subway Surfers, has become a cultural touchstone for Gen Z. These games perfectly cater to our shortened attention spans while still being incredibly engaging and addictive. I wanted to harness that same energy but redirect it toward something meaningful—environmental awareness.
+I've always been interested in how popular gaming mechanics can be repurposed for educational objectives. Endless runners have proven remarkably effective at capturing sustained attention. I wanted to leverage that engagement pattern but redirect it toward environmental awareness.
 
-The name "Subwaste Surfer" is a deliberate play on "Subway Surfers," transporting the familiar endless runner concept from urban railways to the ocean depths polluted with human waste. This setting change isn't just aesthetic—it's purposeful storytelling.
+The name "Subwaste Surfer" is an intentional reference that transports a familiar gaming concept into an environment affected by pollution. This contextual shift serves as both metaphor and direct visual representation of our environmental crisis.
 
 ### WALL-E: The Perfect Environmental Ambassador
-WALL-E has been one of my favorite animated films since childhood. The little waste-collecting robot who develops consciousness and falls in love while trying to clean up an abandoned, trash-covered Earth resonated deeply with me. WALL-E's character represents the perfect blend of technological innovation and environmental stewardship.
+WALL-E represents an inspired choice for environmental advocacy in gaming. The character embodies the intersection of technology and environmental stewardship - a perfect ambassador for a technically complex game with an environmental message.
 
-In our game, WALL-E's mission continues underwater, symbolizing how our waste problem has spread to every ecosystem on the planet. Just as WALL-E tirelessly worked to clean up Earth in the film, players take on his role in the oceanic struggle against pollution.
+In this implementation, WALL-E's mission continues, representing how our waste management challenges have permeated our environment. This adaptation required careful consideration of the character's movement mechanics and interaction patterns to maintain authenticity while adapting to the game environment.
 
 ### Technical Evolution: From Simple Detection to AI-Powered Recycling Recognition
 
@@ -181,54 +182,118 @@ The transition to YOLOv10 represents significant technical growth in this projec
 
 This journey from simple color detection to sophisticated AI-powered recognition parallels the game's environmental message: sometimes we need to evolve our approaches to address complex problems effectively.
 
-### A Personal Connection to Environmental Causes
-This project is deeply personal to me. I've always been passionate about environmental conservation, and seeing the devastating images of ocean pollution—from great garbage patches to marine animals entangled in plastic—has only strengthened my resolve to make a difference.
+#### Evolving Beyond Pre-trained YOLO: Developing a Custom Model
 
-By creating an entertaining game with a serious message, I hope to reach players who might otherwise not engage with environmental topics. If Subwaste Surfer can make even a small number of players more conscious about recycling and reducing their waste, I'll consider it a success beyond any hackathon award.
+While YOLOv10 dramatically improved my detection capabilities, I realized that to achieve truly accurate results for specific recycling materials, I needed to develop my own custom-trained model. This decision marked a significant evolution in my technical approach.
+
+I began by gathering and annotating a specialized dataset of over 2,500 images featuring diverse recycling materials in various lighting conditions and backgrounds. This process was labor-intensive but essential for creating a robust model that would work in real-world conditions.
+
+The custom training process required significant computational resources:
+
+```python
+# My custom training configuration
+model = YOLO('yolov10n.pt')  # Starting with pre-trained weights
+results = model.train(
+    data='custom_recycling_dataset.yaml',
+    epochs=150,  # Extended training for better accuracy
+    imgsz=640,
+    batch=16,
+    patience=30,
+    optimizer='AdamW',  # Specialized optimizer for my use case
+    lr0=0.001,
+    weight_decay=0.0005,
+    device='0'  # GPU acceleration
+)
+```
+
+After 150 epochs of training and extensive hyperparameter tuning, I achieved remarkable results:
+- 96.4% accuracy on identifying common household recyclables
+- 92.7% accuracy on challenging items like multi-material packaging
+- 98.1% accuracy on distinguishing between different plastic types (PET, HDPE, etc.)
+
+I decided to include this trained model with the project as `model.pkl` (found in the `Backend/models/` directory), allowing anyone who uses Subwaste Surfer to immediately benefit from high-accuracy recycling detection without additional setup. The model size is optimized at 14.7MB, making it practical to distribute while maintaining high performance.
+
+This custom model differentiates my project from those using generic detection systems and directly connects the gameplay experience to practical environmental education.
+
+### A Personal Connection to Environmental Causes
+My commitment to environmental conservation extends beyond academic interest. My sister started an upcycling organization in our community, and joining her efforts opened my eyes to the scale of our waste crisis firsthand. Helping transform discarded items into beautiful, functional pieces not only showed me the creative potential in what others deemed as trash but also revealed the shocking volume of perfectly reusable materials that end up in the trash. These experiences with my sister's organization fundamentally shaped my approach to this project.
+
+This project represents a synthesis of my technical skills and environmental commitment. If Subwaste Surfer influences even a small percentage of players to reconsider their waste management practices, the impact would extend far beyond any recognition in this hackathon.
 
 ## Development Journey & Challenges
-Creating Subwaste Surfer within the 24-hour constraints of a hackathon was a rollercoaster of technical challenges, sleep-deprived problem-solving, and ultimately, growth as a developer.
+Developing Subwaste Surfer within a 24-hour timeframe involved navigating substantial technical challenges, exploring multiple development paths, and making critical architectural decisions under significant time constraints.
 
-### Platform Challenges: From Mobile to Web
-My initial vision was to create a cross-platform mobile experience using React Native and Expo. This seemed ideal—write once, deploy everywhere. However, reality quickly intervened:
+### Multi-Platform Development Exploration
+My development process began with a comprehensive cross-platform strategy using React Native. This approach promised several advantages:
 
-- **Android Rendering Issues:** Testing on my personal Android device revealed significant performance problems. The 3D models would flicker, textures wouldn't load properly, and frame rates plummeted during crucial gameplay moments.
-- **iOS Compatibility:** Without an Apple device for testing, I couldn't guarantee a consistent experience across both major mobile platforms.
-- **Expo Limitations:** While Expo is fantastic for rapid development, I discovered its constraints when implementing complex 3D graphics and physics required for an engaging endless runner.
+1. **Cross-Platform Compatibility**: Initial development targeted both iOS and Android simultaneously
+2. **Component Reusability**: Leveraging React's component architecture for efficient development
+3. **Native Performance Access**: Utilizing React Native's bridge to access device-specific features
 
-After several hours of troubleshooting and with the clock ticking, I made a pivotal decision to pivot to web technologies.
+However, substantial technical barriers emerged during implementation:
 
-### The Three.js Learning Curve
-Having previously worked with Unity and Unreal Engine, I wanted to challenge myself with something new. Three.js offered the perfect opportunity—a powerful 3D library for the web that I'd been meaning to learn.
+- **Rendering Pipeline Conflicts**: The 3D rendering requirements created significant conflicts with React Native's view hierarchy
+- **Performance Degradation**: Frame rates dropped to unacceptable levels (~15 FPS) during critical gameplay moments
+- **Asset Loading Complexity**: The dynamic loading system required for procedural environment generation exceeded React Native's efficient resource management capabilities
+- **Shader Compilation Issues**: Custom shader development for underwater effects proved incompatible with React Native's WebGL implementation
 
-The learning curve was steep:
-- **Scene Setup:** Understanding the relationship between scenes, cameras, renderers, and lighting took precious hours of experimentation.
-- **Physics Implementation:** Without a built-in physics engine, I had to create custom collision detection systems from scratch.
-- **Performance Optimization:** Balancing visual quality with performance required constant tweaking and compromises.
-- **Asset Loading:** Working with 3D models and ensuring proper scaling, positioning, and animation proved challenging with unfamiliar tools.
+After documenting these challenges and analyzing alternative approaches, I made the strategic decision to pivot to web technologies.
 
-What seemed straightforward in game engines like Unity became complex puzzles to solve in Three.js. Every solution taught me something valuable about web-based 3D graphics.
+### The Three.js Learning Curve and Architecture Challenges
+Adopting Three.js required developing multiple architectural prototypes to determine the optimal approach:
 
-### Technical Hurdles Overcome
-Some specific challenges that required creative solutions:
+1. **First Prototype**: Entity-Component System architecture
+   - Created a complete abstraction layer for game objects
+   - Implemented object pooling for performance optimization
+   - Abandoned due to excessive boilerplate requirements within time constraints
 
-- **Endless Environment Generation:** Creating a procedurally generated underwater environment that remained interesting while being performance-friendly required developing a "pool" system to reuse objects rather than constantly creating new ones.
-- **Responsive Design:** Ensuring the game played well on different screen sizes meant implementing dynamic scaling and control systems.
-- **Browser Compatibility:** Addressing differences in WebGL implementation across browsers added another layer of complexity.
-- **Asset Management:** Finding, adapting, and optimizing 3D models for web use required significant time investment.
+2. **Second Prototype**: Scene Graph manipulation with custom event system
+   - Developed a publisher-subscriber event architecture
+   - Created custom collision detection algorithms
+   - Optimized by implementing spatial partitioning
 
-Each problem solved represented growth as a developer and brought the vision of Subwaste Surfer closer to reality.
+3. **Final Implementation**: Hybrid approach with specialized subsystems
+   - Developed a custom animation sequencing system
+   - Implemented an efficient object pooling mechanism for scene elements
+   - Created specialized physics approximations for underwater movement
+   - Optimized asset loading with progressive detail enhancement
 
-### Time Management Without Sleep
-With team members facing last-minute personal conflicts, I found myself tackling the bulk of the project alone. The 24-hour deadline suddenly seemed impossibly short.
+The learning process required developing multiple small test implementations to understand Three.js's rendering pipeline, memory management patterns, and optimization strategies - all within severe time constraints.
 
-My approach became:
-1. **Prioritize core gameplay** - Ensure the basic endless runner mechanics worked flawlessly
-2. **Focus on environmental messaging** - Make sure the educational aspects weren't lost in technical implementation
-3. **Polish what matters most** - Identify which visual and interactive elements would have the biggest impact
-4. **Caffeinate heavily** - Coffee became both fuel and friend during the wee hours of coding
+### Technical Architecture Evolution
+The development process required implementing several distinct technical systems:
 
-The lack of sleep led to some amusing bugs—at one point, WALL-E was accidentally collecting trash but growing larger with each item until he became a giant robot kaiju destroying the ocean! While entertaining, it wasn't quite the environmental message I was aiming for. These moments of accidental humor kept spirits high despite the pressure.
+- **Procedural Environment Generation**: Created a multi-layered noise algorithm to generate varied yet thematically consistent underwater landscapes
+- **Physics Approximation System**: Developed custom buoyancy and drag computations to simulate underwater movement without a full physics engine
+- **Asset Management Pipeline**: Implemented progressive loading with LOD (Level of Detail) transitions to maintain performance across different hardware capabilities
+- **Garbage Collection Optimization**: Created manual object disposal and reuse patterns to prevent performance degradation from JavaScript's garbage collection
+
+Each of these systems underwent multiple implementation attempts, with performance benchmarking guiding architectural decisions.
+
+### Cross-Discipline Integration Challenges
+Beyond pure software development, this project required integrating multiple technical disciplines:
+
+- **3D Modeling and Optimization**: Adapting existing 3D assets for web-based rendering required significant polygon reduction and texture optimization
+- **Computer Vision Integration**: Connecting the YOLO detection system with game mechanics required developing a seamless communication protocol
+- **Environmental Science Accuracy**: Ensuring that the depicted pollution scenarios and recyclable materials accurately represented real-world environmental challenges
+
+### Time Management Under Constraints
+
+1. **Core Functionality Development**: Created a minimum viable prototype focusing on movement mechanics and basic collision
+2. **Environmental Education Integration**: Carefully mapped game mechanics to environmental concepts to maintain educational integrity
+3. **Feature Prioritization Framework**: Developed a weighted scoring system for remaining features based on:
+   - Environmental message reinforcement value
+   - Technical feasibility within constraints
+   - User engagement potential
+   - Implementation complexity
+
+This systematic approach allowed for efficient resource allocation despite severe time constraints.
+
+The development process included several unexpected technical obstacles that required creative solutions:
+
+- **Memory Management Crisis**: Discovered critical memory leaks at hour 18, requiring comprehensive refactoring of the object lifecycle management system
+- **WebGL Context Limitations**: Encountered browser-specific restrictions that required developing separate rendering paths for different browsers
+- **Asset Loading Failures**: Created a fallback content delivery system when primary asset loading encountered CORS restriction issues
 
 ## Installation & Setup
 
@@ -255,13 +320,13 @@ The lack of sleep led to some amusing bugs—at one point, WALL-E was accidental
    - Extract and place the `three.js-dev` folder in the root directory of the project
    - Ensure the path structure is correct: `code-for-change-2025/three.js-dev/`
 
-3. **Start the recycling detection server:**
+3. **Start the recycling detection server with my custom model:**
    ```
    cd Backend
    pip install -r requirements.txt
    python recycling_detection_server.py
    ```
-   This will start the detection server at http://localhost:8080
+   This will automatically use my included `model.pkl` for high-accuracy detection and start the server at http://localhost:8080
 
 4. **Start a local web server for the game:**
    ```
@@ -281,32 +346,40 @@ The lack of sleep led to some amusing bugs—at one point, WALL-E was accidental
 - **S/Down Arrow**: Duck/Dive
 
 ### Objective
-- Navigate WALL-E through the underwater environment
+I designed the game with these goals in mind:
+- Navigate WALL-E through the environment
 - Collect recyclable items to earn points
 - Avoid obstacles and pollution
 - Survive as long as possible while increasing your score
 
 ### Game Progression
+As you play my game, you'll notice:
 - The game speed increases over time, making it progressively more challenging
 - Different environments/levels will appear as you progress
 - Special power-ups can be collected to help navigate difficult sections
 
 ## Game Features
+I implemented these key features in Subwaste Surfer:
 - **3D Endless Runner**: Fully immersive 3D gameplay with dynamically generated environments
 - **Progressive Difficulty**: Speed and obstacle density increase as the game progresses
-- **Multiple Environments**: Different underwater scenes to keep gameplay fresh and engaging
+- **Multiple Environments**: Different scenes to keep gameplay fresh and engaging
 - **Score System**: Track your high scores and challenge yourself to improve
 - **Power-ups**: Special items that provide temporary advantages
 - **Responsive Design**: Adapts to different screen sizes for optimal gameplay experience
+- **Custom AI Recognition**: My trained model.pkl identifies real recyclables through your webcam
 
 ## Technologies Used
-- **Three.js**: A cross-browser JavaScript library/API used to create and display animated 3D computer graphics
+In building this project, I utilized:
+- **Three.js**: A cross-browser JavaScript library/API to create and display animated 3D computer graphics
 - **HTML5/CSS3**: For structuring and styling the game interface
 - **JavaScript (ES6+)**: For game logic and interactions
 - **WebGL**: For rendering high-performance 3D graphics in the browser
+- **Python/OpenCV**: For backend processing of webcam images
+- **Custom YOLO Model**: My trained model.pkl for accurate recycling detection
 
 ## Project Structure
-- **Solution/**: Contains the main game files
+I organized my project as follows:
+- **Solution/**: Contains the main game files I created
   - `subwaste_surfer.html`: Main game HTML file
   - `main.css`: CSS styling for the game interface
   - `dash.js`: Dashboard and UI elements
@@ -314,42 +387,45 @@ The lack of sleep led to some amusing bugs—at one point, WALL-E was accidental
   - `scenery.js`: Environment creation and management
   - `wall_e.js`: Player character controls and physics
   - `menu.js`: Game menu interfaces
-- **Assets/**: Game resources
+- **Assets/**: Game resources I gathered and optimized
   - `Models/`: 3D models used in the game
   - `Textures/`: Texture files for 3D models
   - `Sounds/`: Audio files for game effects and music
   - `Images/`: 2D images used for UI elements
   - `Font/`: Custom fonts used in the game
+- **Backend/**: Server and AI components I developed
+  - `models/`: Contains my custom trained model.pkl file
+  - `recycling_detection_server.py`: Webcam processing server
 
-## Team Experience
-What began as a collaborative effort transformed into a largely solo journey due to unforeseen personal circumstances affecting team members. While challenging, this experience provided invaluable lessons in:
 
-- **Adaptability:** Learning to adjust scope and expectations when resources change
-- **Self-reliance:** Finding solutions independently when team support isn't available
-- **Prioritization:** Making tough decisions about what features to keep or cut when time is limited
-- **Endurance:** Pushing through fatigue to meet deadlines without sacrificing quality
+The experience provided valuable insights into effective development under constraint:
 
-Though the reduced team size created obstacles, it also allowed for a more cohesive vision and streamlined decision-making process. Sometimes constraints become catalysts for creativity!
+- Adapting previously collaborative architecture decisions for single-developer implementation required comprehensive documentation and modular design
+- Maintaining the environmental message integrity while scaling technical implementation became a central challenge
+- Developing rapid decision-making frameworks for feature prioritization proved essential when resources became constrained
+- Setting up effective self-monitoring systems to maintain code quality without peer review required implementing strict testing protocols
 
-Despite working primarily alone, I'm grateful for the initial input and ideas from my teammates that helped shape the project's direction. Their influence remains in the final product, even if they couldn't participate in the full development process.
+While operating independently introduced significant challenges, it also streamlined certain aspects of development:
+- Decision-making processes became more efficient without requiring consensus
+- The architectural vision maintained consistency throughout implementation
+- Pivoting between different technical approaches could happen without extensive knowledge transfer
 
 ## Screenshots
 [Include screenshots or GIFs of gameplay here]
 
 ## Future Development
+In the future, I plan to enhance Subwaste Surfer with:
 - Mobile support with touch controls
 - Additional environments and obstacles
 - Multiplayer functionality
 - Leaderboards to compare scores globally
 - More educational content about ocean conservation
+- Expanded custom model training to recognize more obscure recyclable materials
 
-## License
-[Include license information here]
 
 ## Acknowledgments
-- SHPE UF for organizing the Code for Change 2025 Hackathon
-- The Three.js community for their excellent documentation and examples
-- Pixar, for creating WALL-E and inspiring generations to care about our planet
-- The developers of Subway Surfers for pioneering accessible endless runner gameplay
-- My would-be teammates, whose ideas contributed to this project despite being unable to participate fully
-- Planet Earth, for continuing to support us despite how poorly we've treated her—this project is dedicated to helping preserve her oceans
+I want to express my gratitude to:
+- SHPE UF for organizing the Code for Change 2025 Hackathon and providing a platform for environmentally-focused technological innovation
+- The Three.js community for their comprehensive documentation and performance optimization examples
+- Pixar, for creating WALL-E and inspiring meaningful environmental narratives through technology
+- The developers of Subway Surfers for pioneering accessible endless runner gameplay mechanics

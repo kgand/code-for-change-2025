@@ -12,7 +12,12 @@ export default function Menu() {
 	this.lastTimeWhenPaused;
 
 	/**
-	 * Toggles the pause menu.
+	 * Toggles pause state and handles UI adjustments
+	 * @param {Object} composer - The post-processing composer
+	 * @param {number} time - Current game time
+	 * @param {boolean} inHyper - Whether player is in hyper speed mode
+	 * @param {number} wallE_x - Current x position of player character
+	 * @returns {number} Updated game time accounting for pause duration
 	 */
 	this.togglePauseMenu = function (composer, time, inHyper, wallE_x) {
 		var time_difference = 0;
@@ -51,41 +56,41 @@ export default function Menu() {
 	};
 
 	/**
-	 * Return flag indicating if game is paused.
+	 * Checks if the game is currently paused
+	 * @returns {boolean} True if game is paused, false otherwise
 	 */
 	this.isPaused = function () {
 		return this.paused;
 	};
 
 	/**
-	 * Initialises the textures and raycaster/mouse used by the menu.
+	 * Sets up menu UI elements and interaction handling
+	 * @param {THREE.Scene} scene - The scene to add menu elements to
 	 */
 	this.initialise = function (scene) {
-		// Initialise start button texture
-		// Add a timestamp to force the browser to load the updated image
+		// Set up start button with texture
 		const timestamp = new Date().getTime();
 
-		// Initialize menu buttons - create at least the required 4 buttons
-		// The game expects buttons at indices 0-3 for setButtonsX
-		// Start button (index 0)
+		// Create required menu buttons with appropriate positioning
+		// Start button for main menu
 		this.addButton(scene, "../Assets/Images/start.png", 0, 0, 0, 200, 100, "Start");
 		
-		// Placeholder buttons for indices 1, 2, 3
-		// These are required because setButtonsX tries to access buttons 0-3
+		// Create required placeholder buttons
+		// The game expects buttons at specific indices for control functionality
 		for (let i = 1; i <= 3; i++) {
 			this.addButton(scene, "../Assets/Images/display_instructions.png", 0, 0, 0, 10, 10, "Placeholder" + i);
-			this.buttons[i].visible = false; // Hide them since they're just placeholders
+			this.buttons[i].visible = false; // Hide placeholders from view
 		}
 		
-		// Guide button (last button - index 4)
+		// Instructions button for gameplay help
 		this.addButton(scene, "../Assets/Images/display_instructions.png", 0, 0, 0, 200, 100, "Guide");
 		
-		// Initialise the raycaster for the menu
+		// Initialize raycaster for menu interaction/button selection
 		this.mouse = new THREE.Vector2();
 		this.raycaster = new THREE.Raycaster();
 
-		// Initialise the grayscale shader/pass 
-		// https://en.wikipedia.org/wiki/Grayscale
+		// Set up grayscale shader for pause effect
+		// Uses standard RGB to grayscale conversion formula
 		const pauseShader = {
 			uniforms: {
 				tDiffuse: { value: null },
