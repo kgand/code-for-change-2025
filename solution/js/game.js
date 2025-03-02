@@ -95,7 +95,9 @@ const settings = {
     difficultyIncreaseRate: 0.3, // Will be set based on difficulty
     comboTimeWindow: 2000, // Time window in ms for combo
     maxComboMultiplier: 5,
-    maxDifficultyLevel: 5 // Maximum number of difficulty increases
+    maxDifficultyLevel: 5, // Maximum number of difficulty increases
+    comboDisplayTime: 1000, // Time to display combo multiplier
+    comboMultiplierStep: 0.1 // Step to increase combo multiplier
 };
 
 // Waste type point values
@@ -323,79 +325,113 @@ function displayEnvironmentalFacts() {
 
 // Start the game
 function startGame() {
+    gameActive = true;
+    gamePaused = false;
+    score = 0;
+    wasteCollected = 0;
+    comboCount = 0;
+    comboMultiplier = 1;
+    comboTimer = 0;
+    lastCollectedWasteType = null;
+    obstacles = [];
+    collectibles = [];
+    scorePopups = [];
+    player.lane = 1; // Middle lane
+    player.isJumping = false;
+    player.velocityY = 0;
+    
+    // Reset animation timer
+    animationTime = 0;
+    
+    // Reset difficulty setting timer
+    settings.lastDifficultyIncrease = 0;
+    
+    // Update settings based on selected difficulty
+    applyDifficultySettings();
+    
+    // Show game play screen
     gameStartScreen.classList.add('hidden');
     gamePlayScreen.classList.remove('hidden');
     gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
     
-    init();
-    gameActive = true;
-    gamePaused = false;
+    // Start game loop
     lastTime = performance.now();
-    animationFrameId = requestAnimationFrame(gameLoop);
+    gameLoop(lastTime);
     
     // Start background music
     if (typeof soundManager !== 'undefined') {
         soundManager.startBackgroundMusic();
     }
     
-    // Initialize touch controls if available
-    if (typeof TouchControls !== 'undefined') {
-        touchControls = new TouchControls({
-            isRunning: () => gameActive && !gamePaused,
-            movePlayer: (direction) => movePlayer(direction),
-            jump: () => playerJump(),
-            togglePause: () => {
-                if (gameActive && !gamePaused) {
-                    pauseGame();
-                } else if (gameActive && gamePaused) {
-                    resumeGame();
-                }
-            }
-        });
-        console.log('Touch controls initialized');
+    // Initialize background layers
+    if (backgroundLayers.length === 0) {
+        initBackgroundLayers();
+    }
+    
+    // Announce game start for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('gameStart');
     }
 }
 
 // Pause the game
 function pauseGame() {
-    if (!gameActive || gamePaused) return;
+    if (!gameActive) return;
     
+    gameActive = false;
     gamePaused = true;
     cancelAnimationFrame(animationFrameId);
     
-    // Only show pause screen if not in mini-game
-    if (!inMiniGame) {
-        // Display a fact related to the last collected waste type, or a general fact
-        const factCategory = lastCollectedWasteType ? wasteCategories[lastCollectedWasteType] : null;
-        pauseScreenFactElement.textContent = getRandomFact(factCategory);
-        
-        gamePlayScreen.classList.add('hidden');
-        gamePausedScreen.classList.remove('hidden');
+    // Display a fact in the pause screen
+    pauseScreenFactElement.textContent = getRandomFact();
+    
+    // Update music button text based on current state
+    musicButton.textContent = soundManager && soundManager.musicEnabled ? 'Music On' : 'Music Off';
+    
+    // Update sound effects button text based on current state
+    soundEffectsButton.textContent = soundManager && soundManager.soundEffectsEnabled ? 'Sound Effects On' : 'Sound Effects Off';
+    
+    // Update ARIA pressed state for the buttons
+    if (musicButton && soundManager) {
+        musicButton.setAttribute('aria-pressed', soundManager.musicEnabled.toString());
     }
     
-    // Pause background music
-    if (typeof soundManager !== 'undefined') {
-        soundManager.pauseBackgroundMusic();
+    if (soundEffectsButton && soundManager) {
+        soundEffectsButton.setAttribute('aria-pressed', soundManager.soundEffectsEnabled.toString());
+    }
+    
+    gamePlayScreen.classList.add('hidden');
+    gamePausedScreen.classList.remove('hidden');
+    
+    // Announce game pause for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('gamePause');
     }
 }
 
 // Resume the game
 function resumeGame() {
-    if (!gameActive || !gamePaused) return;
+    if (!gamePaused) return;
     
-    // Don't resume if in mini-game
-    if (inMiniGame) return;
-    
+    gameActive = true;
     gamePaused = false;
+    
     gamePlayScreen.classList.remove('hidden');
     gamePausedScreen.classList.add('hidden');
-    lastTime = performance.now();
-    animationFrameId = requestAnimationFrame(gameLoop);
     
-    // Resume background music
-    if (typeof soundManager !== 'undefined') {
+    // Resume game loop
+    lastTime = performance.now();
+    gameLoop(lastTime);
+    
+    // Resume background music if enabled
+    if (typeof soundManager !== 'undefined' && soundManager.musicEnabled) {
         soundManager.resumeBackgroundMusic();
+    }
+    
+    // Announce game resume for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('gameResume');
     }
 }
 
@@ -1187,6 +1223,11 @@ function gameOver() {
         soundManager.pauseBackgroundMusic();
         soundManager.play('gameOver');
     }
+    
+    // Announce game over for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('gameOver', { score, wasteCollected });
+    }
 }
 
 // Player jump function
@@ -1211,73 +1252,72 @@ function playerJump() {
 // Handle collectible collection
 function collectWaste(collectibleIndex) {
     const collectible = collectibles[collectibleIndex];
-    const wasteType = collectible.type;
-    let pointValue = 0;
-    
-    // Determine point value based on waste type
-    switch (wasteType) {
-        case 0: // Plastic
-            pointValue = wastePoints.plastic;
-            break;
-        case 1: // Paper
-            pointValue = wastePoints.paper;
-            break;
-        case 2: // Metal
-            pointValue = wastePoints.metal;
-            break;
-    }
-    
-    // Check for combo
-    const currentTime = performance.now();
-    if (currentTime - lastCollectTime < settings.comboTimeWindow) {
-        comboCount++;
-        comboMultiplier = Math.min(settings.maxComboMultiplier, comboCount);
-    } else {
-        comboCount = 1;
-        comboMultiplier = 1;
-    }
+    const collectibleType = collectible.type;
+    const basePoints = collectible.points;
     
     // Apply combo multiplier
-    pointValue *= comboMultiplier;
+    const pointsEarned = Math.round(basePoints * comboMultiplier);
     
-    // Update score and stats
-    score += pointValue;
+    // Add to score
+    score += pointsEarned;
+    updateScore();
+    
+    // Increment waste collected
     wasteCollected++;
-    lastCollectTime = currentTime;
-    lastCollectedWasteType = wasteType;
+    updateWasteCollected();
     
-    // Create particle effect
-    createCollectionParticles(collectible.x, collectible.y, collectible.color);
-    
-    // Check if we should trigger the waste sorting mini-game
-    if (wasteSortingEnabled && wasteSortingGame && !inMiniGame && 
-        wasteCollected > 0 && wasteCollected % wasteSortingThreshold === 0) {
-        triggerWasteSortingGame();
-    }
+    // Update last collected waste type
+    lastCollectedWasteType = collectibleType;
     
     // Reset combo timer
-    comboTimer = settings.comboTimeWindow;
+    const currentTime = performance.now();
+    const timeSinceLastCollect = currentTime - lastCollectTime;
+    lastCollectTime = currentTime;
+    
+    // Apply combo system: if collected within time window, increase combo
+    if (timeSinceLastCollect < settings.comboTimeWindow) {
+        comboCount++;
+        comboMultiplier = Math.min(settings.maxComboMultiplier, 1 + (comboCount * settings.comboMultiplierStep));
+        comboTimer = settings.comboDisplayTime;
+    } else {
+        // Reset combo if too much time has passed
+        comboCount = 0;
+        comboMultiplier = 1;
+    }
     
     // Create score popup
     scorePopups.push({
         x: collectible.x,
         y: collectible.y,
-        value: pointValue,
+        value: pointsEarned,
         opacity: 1,
         velocityY: -2,
         combo: comboMultiplier > 1 ? comboMultiplier : null
     });
     
-    // Remove the collectible
-    collectibles.splice(collectibleIndex, 1);
+    // Create particle effect
+    createCollectionParticles(collectible.x, collectible.y, collectible.color);
     
-    // Update UI
-    updateScore();
-    updateWasteCollected();
-    
-    // Play collect sound
+    // Play sound effect
     if (typeof soundManager !== 'undefined') {
         soundManager.play('collect');
+    }
+    
+    // Announce waste collection for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('collectWaste', { 
+            type: collectibleType,
+            points: pointsEarned,
+            combo: comboMultiplier
+        });
+    }
+    
+    // Remove collectible
+    collectibles.splice(collectibleIndex, 1);
+    
+    // Check if we should trigger the waste sorting mini-game
+    if (wasteSortingEnabled && wasteCollected % wasteSortingThreshold === 0) {
+        triggerWasteSortingGame();
     }
 }
 
@@ -1409,24 +1449,25 @@ function movePlayer(direction) {
 
 // Create difficulty increase popup
 function createDifficultyPopup(level) {
-    const messages = [
-        "Speed increasing!",
-        "Challenge intensifies!",
-        "Difficulty rising!",
-        "Getting harder!",
-        "Maximum challenge!"
-    ];
-    
-    const message = level <= messages.length ? messages[level - 1] : messages[messages.length - 1];
-    
+    // Create popup
     scorePopups.push({
         x: canvas.width / 2,
-        y: canvas.height / 3,
-        value: message,
+        y: canvas.height / 2,
+        value: `Difficulty Level ${level}!`,
         opacity: 1,
         velocityY: -1,
         isDifficultyPopup: true
     });
+    
+    // Play sound if available
+    if (typeof soundManager !== 'undefined') {
+        soundManager.play('collect'); // Use collect sound as a level up notification
+    }
+    
+    // Announce level up for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('levelUp', { level });
+    }
 }
 
 // Create particles for waste collection
@@ -1519,6 +1560,11 @@ function collectPowerUp(index) {
     // Play power-up sound
     if (typeof soundManager !== 'undefined') {
         soundManager.play('powerUp');
+    }
+    
+    // Announce power-up collection for screen readers
+    if (typeof accessibilityManager !== 'undefined') {
+        accessibilityManager.announceGameEvent('powerUp', { type: typeConfig.description });
     }
     
     // Add bonus points
