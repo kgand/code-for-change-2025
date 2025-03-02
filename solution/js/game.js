@@ -14,6 +14,9 @@ const scoreElement = document.getElementById('score');
 const wasteCollectedElement = document.getElementById('waste-collected');
 const finalScoreElement = document.getElementById('final-score');
 const finalWasteElement = document.getElementById('final-waste');
+const startScreenFactElement = document.getElementById('start-screen-fact');
+const pauseScreenFactElement = document.getElementById('pause-screen-fact');
+const gameOverFactElement = document.getElementById('game-over-fact');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
@@ -29,6 +32,7 @@ let animationFrameId;
 let lastTime = 0;
 let animationTime = 0;
 let lastCollectTime = 0;
+let lastCollectedWasteType = null;
 
 // Game settings
 const settings = {
@@ -51,6 +55,9 @@ const wastePoints = {
     paper: 15,    // Type 1
     metal: 25     // Type 2
 };
+
+// Waste type categories for facts
+const wasteCategories = ["plastic", "paper", "metal"];
 
 // Game objects
 let player;
@@ -75,6 +82,7 @@ function init() {
     scorePopups = [];
     animationTime = 0;
     lastCollectTime = 0;
+    lastCollectedWasteType = null;
     settings.gameSpeed = 5;
     settings.lastDifficultyIncrease = 0;
     
@@ -94,6 +102,14 @@ function init() {
     // Update UI
     updateScore();
     updateWasteCollected();
+}
+
+// Display environmental facts
+function displayEnvironmentalFacts() {
+    // Display a random fact on the start screen
+    startScreenFactElement.textContent = getRandomFact();
+    
+    // The pause and game over facts will be set when those screens are shown
 }
 
 // Start the game
@@ -116,6 +132,11 @@ function pauseGame() {
     
     gamePaused = true;
     cancelAnimationFrame(animationFrameId);
+    
+    // Display a fact related to the last collected waste type, or a general fact
+    const factCategory = lastCollectedWasteType ? wasteCategories[lastCollectedWasteType] : null;
+    pauseScreenFactElement.textContent = getRandomFact(factCategory);
+    
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.remove('hidden');
 }
@@ -318,6 +339,9 @@ function checkCollisions() {
             player.y < collectibles[i].y + collectibles[i].height &&
             player.y + player.height > collectibles[i].y
         ) {
+            // Store the waste type for environmental facts
+            lastCollectedWasteType = collectibles[i].type;
+            
             // Determine points based on waste type
             let pointsEarned = 0;
             switch (collectibles[i].type) {
@@ -657,6 +681,10 @@ function gameOver() {
     finalScoreElement.textContent = `Score: ${score}`;
     finalWasteElement.textContent = `Waste Collected: ${wasteCollected}`;
     
+    // Display a fact related to the last collected waste type, or a general fact
+    const factCategory = lastCollectedWasteType ? wasteCategories[lastCollectedWasteType] : null;
+    gameOverFactElement.textContent = getRandomFact(factCategory);
+    
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.remove('hidden');
@@ -714,4 +742,7 @@ window.addEventListener('load', () => {
     gamePlayScreen.classList.add('hidden');
     gamePausedScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
+    
+    // Display environmental facts
+    displayEnvironmentalFacts();
 }); 

@@ -30,6 +30,10 @@
                 </div>
                 <p class="combo-info">Collect waste quickly to build combos and multiply your score!</p>
             </div>
+            <div class="fact-container">
+                <h3>Did You Know?</h3>
+                <p id="start-screen-fact" class="environmental-fact"></p>
+            </div>
             <button id="start-button">Start Game</button>
             
             <div class="controls-info">
@@ -49,6 +53,10 @@
         <div id="game-paused" class="game-screen hidden">
             <h1>Game Paused</h1>
             <p>Take a break and think about the environment!</p>
+            <div class="fact-container">
+                <h3>Environmental Fact</h3>
+                <p id="pause-screen-fact" class="environmental-fact"></p>
+            </div>
             <button id="resume-button">Resume Game</button>
             <button id="restart-from-pause-button" class="secondary-button">Restart</button>
         </div>
@@ -56,10 +64,15 @@
             <h1>Game Over</h1>
             <div id="final-score">Score: 0</div>
             <div id="final-waste">Waste Collected: 0</div>
+            <div class="fact-container">
+                <h3>Environmental Fact</h3>
+                <p id="game-over-fact" class="environmental-fact"></p>
+            </div>
             <button id="restart-button">Play Again</button>
         </div>
     </div>
     
+    <script src="solution/js/environmental-facts.js"></script>
     <script src="solution/js/game.js"></script>
 </body>
 </html> 
